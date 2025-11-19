@@ -79,6 +79,7 @@ app.post("/webhook", async (req, res) => {
 });
 
 
+
 // 🤖 LÓGICA DEL BOT
 async function handleIncomingMessage(phone, text) {
   const user = getUserState(phone);

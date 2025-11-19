@@ -89,9 +89,11 @@ app.post("/webhook", async (req, res) => {
       const msg = messages[0];
       const from = msg.from; // número del usuario
       const text = msg.text?.body?.trim() || "";
+      const location = msg.location || null;
 
-      console.log("Mensaje entrante:", { from, text });
-      await handleIncomingMessage(from, text);
+      console.log("Mensaje entrante:", { from, text, location });
+      await handleIncomingMessage(from, text, location = null);
+
     } else {
       console.log(
         "Webhook sin mensajes (posiblemente status u otro tipo de evento)"
@@ -165,14 +167,35 @@ async function handleIncomingMessage(phone, text) {
       return;
     }
 
-    case "ESPERANDO_UBICACION": {
-      setUserState(phone, "ESPERANDO_GRAVEDAD", { ubicacion: text });
-      await sendMessage(
-        phone,
-        "Del 1 al 5, ¿qué tan grave es?\n1 = leve\n5 = peligro serio."
-      );
-      return;
-    }
+   case "ESPERANDO_UBICACION": {
+  let ubicacionStr = text;
+
+  // Si viene una ubicación nativa de WhatsApp, la convertimos a algo útil
+  if (location) {
+    const { latitude, longitude, name, address } = location;
+    const coords = `${latitude},${longitude}`;
+    const mapsLink = `https://www.google.com/maps?q=${latitude},${longitude}`;
+    ubicacionStr = `${coords} ${name ? " - " + name : ""} ${address ? " - " + address : ""} (${mapsLink})`;
+  }
+
+  if (!ubicacionStr || ubicacionStr.trim() === "") {
+    await sendMessage(
+      phone,
+      "No pude leer la ubicación. Envía la ubicación desde WhatsApp (adjuntar → ubicación) o pega un enlace de Google Maps."
+    );
+    return;
+  }
+
+  setUserState(phone, "ESPERANDO_GRAVEDAD", { ubicacion: ubicacionStr.trim() });
+  console.log("Ubicación registrada para", phone, "=>", ubicacionStr);
+
+  await sendMessage(
+    phone,
+    "Del 1 al 5, ¿qué tan grave es?\n1 = leve\n5 = peligro serio."
+  );
+  return;
+}
+
 
    case "ESPERANDO_GRAVEDAD": {
   const gravedad = parseInt(text, 10);

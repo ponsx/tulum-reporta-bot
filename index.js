@@ -42,13 +42,13 @@ app.get("/webhook", (req, res) => {
 
   console.log("Webhook verify call:", { mode, token, challenge });
 
-  // Para la validación de Meta, basta con devolver el challenge
   if (challenge) {
     return res.status(200).send(challenge);
   }
 
   return res.status(200).send("ok");
 });
+
 
 
 // 📩 RECEPCIÓN DE MENSAJES (POST) – WhatsApp → aquí
@@ -63,7 +63,7 @@ app.post("/webhook", async (req, res) => {
 
     if (messages && messages.length > 0) {
       const msg = messages[0];
-      const from = msg.from; // número del usuario
+      const from = msg.from;
       const text = msg.text?.body?.trim() || "";
 
       console.log("Mensaje entrante:", from, text);
@@ -75,9 +75,9 @@ app.post("/webhook", async (req, res) => {
     console.error("Error procesando webhook:", err);
   }
 
-  // WhatsApp solo quiere 200 rápido
   return res.sendStatus(200);
 });
+
 
 // 🤖 LÓGICA DEL BOT
 async function handleIncomingMessage(phone, text) {

@@ -1,9 +1,22 @@
 // index.js
+
+import { createClient } from "@supabase/supabase-js";
 import express from "express";
 import fetch from "node-fetch";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+let supabase = null;
+if (supabaseUrl && supabaseKey) {
+  supabase = createClient(supabaseUrl, supabaseKey);
+  console.log("Supabase inicializado");
+} else {
+  console.warn("Supabase NO configurado (faltan SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY)");
+}
+
 
 app.use(express.json());
 
@@ -161,28 +174,54 @@ async function handleIncomingMessage(phone, text) {
       return;
     }
 
-    case "ESPERANDO_GRAVEDAD": {
-      const gravedad = parseInt(text, 10);
-      if (isNaN(gravedad) || gravedad < 1 || gravedad > 5) {
-        await sendMessage(phone, "Responde con un número del 1 al 5.");
-        return;
-      }
+   case "ESPERANDO_GRAVEDAD": {
+  const gravedad = parseInt(text, 10);
+  if (isNaN(gravedad) || gravedad < 1 || gravedad > 5) {
+    await sendMessage(phone, "Responde con un número del 1 al 5.");
+    return;
+  }
 
-      const data = { ...user.data, gravedad };
-      const prioridad = calcularPrioridad(data);
+  const data = { ...user.data, gravedad };
+  const prioridad = calcularPrioridad(data);
 
-      console.log("Incidente registrado:", { phone, ...data, prioridad });
+  console.log("Incidente registrado:", { phone, ...data, prioridad });
 
-      // TODO: guardar en BD (Supabase) aquí
-
-      await sendMessage(
+  // 👉 Guardar en Supabase
+  if (supabase) {
+    try {
+      const { error } = await supabase.from("incidentes").insert({
         phone,
-        `✅ Gracias, tu reporte fue registrado.\n\nTipo: ${data.tipo}\nZona: ${data.zona}\nGravedad: ${gravedad}\nPrioridad interna: ${prioridad}\n\nUsaremos estos datos para mapear y priorizar la atención.`
-      );
+        tipo: data.tipo,
+        zona: data.zona,
+        descripcion: data.descripcion,
+        ubicacion: data.ubicacion,
+        gravedad: data.gravedad,
+        prioridad,
+        estado: "pendiente",
+        raw: data
+      });
 
-      setUserState(phone, "IDLE", {});
-      return;
+      if (error) {
+        console.error("Error guardando en Supabase:", error);
+      } else {
+        console.log("Incidente guardado en Supabase");
+      }
+    } catch (e) {
+      console.error("Excepción guardando en Supabase:", e);
     }
+  } else {
+    console.warn("Supabase no configurado, incidente NO guardado en BD");
+  }
+
+  await sendMessage(
+    phone,
+    `✅ Gracias, tu reporte fue registrado.\n\nTipo: ${data.tipo}\nZona: ${data.zona}\nGravedad: ${gravedad}\nPrioridad interna: ${prioridad}\n\nUsaremos estos datos para mapear y priorizar la atención.`
+  );
+
+  setUserState(phone, "IDLE", {});
+  return;
+}
+
 
     default: {
       setUserState(phone, "IDLE", {});

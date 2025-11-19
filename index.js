@@ -92,7 +92,7 @@ app.post("/webhook", async (req, res) => {
       const location = msg.location || null;
 
       console.log("Mensaje entrante:", { from, text, location });
-      await handleIncomingMessage(from, text, location = null);
+      await handleIncomingMessage(from, text, location);
 
     } else {
       console.log(
@@ -111,7 +111,7 @@ app.post("/webhook", async (req, res) => {
 //  LÓGICA DEL BOT
 // =======================
 
-async function handleIncomingMessage(phone, text) {
+async function handleIncomingMessage(phone, text, location) {
   const user = getUserState(phone);
   console.log("handleIncomingMessage estado actual:", phone, user.state);
 

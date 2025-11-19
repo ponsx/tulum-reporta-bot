@@ -6,7 +6,7 @@ Bot de WhatsApp para recibir y registrar reportes ciudadanos de infraestructura 
 
 - Node.js (Express)
 - WhatsApp Cloud API
-- Railway (deploy)
+- Render (deploy)
 - Supabase (base de datos, futuro)
 
 ## 📦 Instalación local

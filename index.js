@@ -54,6 +54,9 @@ app.get("/webhook", (req, res) => {
 // 📩 RECEPCIÓN DE MENSAJES (POST) – WhatsApp → aquí
 app.post("/webhook", async (req, res) => {
   try {
+    console.log("POST /webhook recibido:");
+    console.log(JSON.stringify(req.body, null, 2));
+
     const entry = req.body.entry?.[0];
     const changes = entry?.changes?.[0];
     const messages = changes?.value?.messages;
@@ -65,6 +68,8 @@ app.post("/webhook", async (req, res) => {
 
       console.log("Mensaje entrante:", from, text);
       await handleIncomingMessage(from, text);
+    } else {
+      console.log("Webhook sin mensajes (otro tipo de evento o estructura distinta)");
     }
   } catch (err) {
     console.error("Error procesando webhook:", err);

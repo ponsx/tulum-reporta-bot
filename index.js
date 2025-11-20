@@ -21,6 +21,98 @@ if (supabaseUrl && supabaseKey) {
 app.use(express.json());
 
 // =======================
+//  CATEGORÍAS PRINCIPALES
+// =======================
+
+const CATEGORIES = {
+  "1": {
+    nombre: "Baches y superficie de la calle",
+    subcategorias: [
+      "Bache en la calle",
+      "Pavimento roto",
+      "Hundimiento",
+      "Tope en mal estado",
+    ],
+  },
+  "2": {
+    nombre: "Alumbrado público",
+    subcategorias: [
+      "Luminaria apagada",
+      "Luminaria intermitente",
+      "Poste dañado",
+      "Zona sin alumbrado",
+    ],
+  },
+  "3": {
+    nombre: "Basura y limpieza",
+    subcategorias: [
+      "Basura acumulada",
+      "Escombro",
+      "Contenedor lleno o roto",
+      "Tiradero ilegal",
+    ],
+  },
+  "4": {
+    nombre: "Drenaje y agua",
+    subcategorias: [
+      "Alcantarilla tapada",
+      "Fuga de agua",
+      "Encharcamiento / inundación",
+      "Olor fuerte a drenaje",
+    ],
+  },
+  "5": {
+    nombre: "Señalización y semáforos",
+    subcategorias: [
+      "Señal caída o dañada",
+      "Falta de señal",
+      "Semáforo apagado",
+      "Semáforo desfasado",
+    ],
+  },
+  "6": {
+    nombre: "Banquetas y espacio peatonal",
+    subcategorias: [
+      "Banqueta rota",
+      "Obstrucción en banqueta",
+      "Falta de rampa",
+      "Tapa o registro suelto",
+    ],
+  },
+  "7": {
+    nombre: "Áreas verdes y árboles",
+    subcategorias: [
+      "Árbol caído",
+      "Rama peligrosa",
+      "Vegetación bloqueando el paso",
+      "Falta de poda",
+    ],
+  },
+  "8": {
+    nombre: "Seguridad y vandalismo",
+    subcategorias: [
+      "Grafiti / vandalismo",
+      "Punto con robos frecuentes",
+      "Daño a mobiliario urbano",
+      "Zona muy oscura e insegura",
+    ],
+  },
+  "9": {
+    nombre: "Ruido y molestias",
+    subcategorias: [
+      "Música muy alta",
+      "Fiestas recurrentes",
+      "Maquinaria ruidosa",
+      "Otros ruidos constantes",
+    ],
+  },
+  "0": {
+    nombre: "Otro tipo de problema",
+    subcategorias: [], // aquí pediremos texto libre
+  },
+};
+
+// =======================
 //  ESTADO EN MEMORIA
 // =======================
 
@@ -119,130 +211,238 @@ async function handleIncomingMessage(phone, text, location, image) {
 
   // Inicio de conversación
   if (user.state === "IDLE") {
-    setUserState(phone, "ESPERANDO_TIPO");
+    setUserState(phone, "ESPERANDO_CATEGORIA");
     await sendMessage(
       phone,
-      "Hola 👋, este es el bot de *Tulum Reporta*.\n¿Qué quieres reportar?\n1️⃣ Bache / camino\n2️⃣ Basura / escombro\n3️⃣ Drenaje / inundación\n4️⃣ Alumbrado\n5️⃣ Otro"
+      "Hola 👋, este es el bot de *Tulum Reporta*.\n¿Qué tipo de problema quieres reportar?\n" +
+        "1️⃣ Baches y superficie de la calle\n" +
+        "2️⃣ Alumbrado público\n" +
+        "3️⃣ Basura y limpieza\n" +
+        "4️⃣ Drenaje y agua\n" +
+        "5️⃣ Señalización y semáforos\n" +
+        "6️⃣ Banquetas y espacio peatonal\n" +
+        "7️⃣ Áreas verdes y árboles\n" +
+        "8️⃣ Seguridad y vandalismo\n" +
+        "9️⃣ Ruido y molestias\n" +
+        "0️⃣ Otro tipo de problema"
     );
     return;
   }
 
   switch (user.state) {
-    case "ESPERANDO_TIPO": {
-      const tipoMap = {
-        "1": "Bache / camino",
-        "2": "Basura / escombro",
-        "3": "Drenaje / inundación",
-        "4": "Alumbrado",
-        "5": "Otro",
-      };
-
-      const tipo = tipoMap[text];
-      if (!tipo) {
-        await sendMessage(phone, "Responde con un número del 1 al 5.");
+    // 1) CATEGORÍA PRINCIPAL
+    case "ESPERANDO_CATEGORIA": {
+      const categoria = CATEGORIES[text];
+      if (!categoria) {
+        await sendMessage(
+          phone,
+          "Responde con un número de la lista (0 a 9) para elegir la categoría."
+        );
         return;
       }
 
-      setUserState(phone, "ESPERANDO_ZONA", { tipo });
+      setUserState(phone, "ESPERANDO_SUBCATEGORIA", {
+        categoriaClave: text,
+        categoriaNombre: categoria.nombre,
+      });
+
+      if (categoria.subcategorias.length > 0) {
+        const subMenu = categoria.subcategorias
+          .map((s, idx) => `${idx + 1}. ${s}`)
+          .join("\n");
+        await sendMessage(
+          phone,
+          `Has elegido: *${categoria.nombre}*\nAhora elige una opción:\n${subMenu}`
+        );
+      } else {
+        await sendMessage(
+          phone,
+          `Has elegido: *${categoria.nombre}*.\nEscribe brevemente qué tipo de problema es (subcategoría).`
+        );
+      }
+      return;
+    }
+
+    // 2) SUBCATEGORÍA
+    case "ESPERANDO_SUBCATEGORIA": {
+      const { categoriaClave } = user.data;
+      const categoria = CATEGORIES[categoriaClave];
+
+      let subcategoria;
+
+      if (!categoria) {
+        // algo raro, reinicia
+        setUserState(phone, "IDLE", {});
+        await sendMessage(
+          phone,
+          "Hubo un problema con la categoría. Escribe cualquier cosa para empezar de nuevo."
+        );
+        return;
+      }
+
+      if (categoria.subcategorias.length > 0) {
+        const idx = parseInt(text, 10);
+        if (
+          isNaN(idx) ||
+          idx < 1 ||
+          idx > categoria.subcategorias.length
+        ) {
+          const subMenu = categoria.subcategorias
+            .map((s, i) => `${i + 1}. ${s}`)
+            .join("\n");
+          await sendMessage(
+            phone,
+            `Responde con un número de la lista:\n${subMenu}`
+          );
+          return;
+        }
+        subcategoria = categoria.subcategorias[idx - 1];
+      } else {
+        // categoría "Otro tipo de problema": texto libre
+        if (!text) {
+          await sendMessage(
+            phone,
+            "Escribe brevemente qué tipo de problema es."
+          );
+          return;
+        }
+        subcategoria = text;
+      }
+
+      setUserState(phone, "ESPERANDO_FOTO", {
+        ...user.data,
+        subcategoria,
+      });
+
       await sendMessage(
         phone,
-        "¿En qué zona / colonia está el problema?\nEjemplo: “Región 15, cerca de la tienda X”."
+        "Ahora envía una *foto del problema*. La foto es obligatoria para registrar el reporte."
       );
       return;
     }
 
-    case "ESPERANDO_ZONA": {
-      setUserState(phone, "ESPERANDO_DESCRIPCION", { zona: text });
+    // 3) FOTO (OBLIGATORIA)
+    case "ESPERANDO_FOTO": {
+      if (!image) {
+        await sendMessage(
+          phone,
+          "Necesito al menos *una foto* del problema para continuar. Adjunta una imagen del lugar."
+        );
+        return;
+      }
+
+      const foto_url = await guardarImagenEnSupabase(image);
+
+      if (!foto_url) {
+        await sendMessage(
+          phone,
+          "Hubo un problema al guardar la foto. Intenta enviar la imagen de nuevo."
+        );
+        return;
+      }
+
+      setUserState(phone, "ESPERANDO_DESCRIPCION", {
+        ...user.data,
+        foto_url,
+      });
+
       await sendMessage(
         phone,
-        "Describe brevemente el problema (tamaño, tiempo que lleva, si es peligroso, etc.)."
+        "Describe brevemente el problema (qué pasa, desde cuándo, si afecta el paso, etc.)."
       );
       return;
     }
 
+    // 4) DESCRIPCIÓN DEL REPORTE
     case "ESPERANDO_DESCRIPCION": {
-      setUserState(phone, "ESPERANDO_UBICACION", { descripcion: text });
+      if (!text) {
+        await sendMessage(
+          phone,
+          "Necesito que escribas una breve descripción del problema."
+        );
+        return;
+      }
+
+      setUserState(phone, "ESPERANDO_DETALLES_UBICACION", {
+        ...user.data,
+        descripcion: text,
+      });
+
       await sendMessage(
         phone,
-        "Envía la *ubicación* del lugar (adjuntar → ubicación en WhatsApp o pega un link de Google Maps)."
+        "Ahora escribe *detalles de la ubicación*: colonia, calles cercanas o referencias del lugar."
       );
       return;
     }
 
-    case "ESPERANDO_UBICACION": {
-      let ubicacionStr = text;
+    // 5) DETALLES DE LA UBICACIÓN (COLONIA, CALLES, REFERENCIAS)
+    case "ESPERANDO_DETALLES_UBICACION": {
+      if (!text) {
+        await sendMessage(
+          phone,
+          "Escribe colonia, calles cercanas o alguna referencia clara del lugar."
+        );
+        return;
+      }
 
-      // Si viene una ubicación nativa de WhatsApp, la convertimos a algo útil
+      setUserState(phone, "ESPERANDO_UBICACION_GPS", {
+        ...user.data,
+        detallesUbicacion: text,
+      });
+
+      await sendMessage(
+        phone,
+        "Por favor envía la *ubicación GPS* del lugar (adjuntar → ubicación en WhatsApp o pegando las coordenadas en formato latitud,longitud)."
+      );
+      return;
+    }
+
+    // 6) UBICACIÓN GPS (SIN MENCIONAR GOOGLE MAPS)
+    case "ESPERANDO_UBICACION_GPS": {
+      let ubicacionGpsStr = text;
+
       if (location) {
         const { latitude, longitude, name, address } = location;
         const coords = `${latitude},${longitude}`;
-        const mapsLink = `https://www.google.com/maps?q=${latitude},${longitude}`;
-        ubicacionStr = `${coords} ${name ? " - " + name : ""} ${
-          address ? " - " + address : ""
-        } (${mapsLink})`;
+        // No mencionamos enlaces ni Google Maps
+        ubicacionGpsStr = `${coords}${
+          name ? " - " + name : ""
+        }${address ? " - " + address : ""}`;
       }
 
-      if (!ubicacionStr || ubicacionStr.trim() === "") {
+      if (!ubicacionGpsStr || ubicacionGpsStr.trim() === "") {
         await sendMessage(
           phone,
-          "No pude leer la ubicación. Envía la ubicación desde WhatsApp (adjuntar → ubicación) o pega un enlace de Google Maps."
+          "No pude leer la ubicación. Envía la ubicación GPS como adjunto o escribe las coordenadas en formato latitud,longitud."
         );
         return;
       }
 
-      setUserState(phone, "ESPERANDO_GRAVEDAD", {
-        ubicacion: ubicacionStr.trim(),
+      setUserState(phone, "ESPERANDO_PELIGRO", {
+        ...user.data,
+        ubicacionGps: ubicacionGpsStr.trim(),
       });
-      console.log("Ubicación registrada para", phone, "=>", ubicacionStr);
 
       await sendMessage(
         phone,
-        "Del 1 al 5, ¿qué tan grave es?\n1 = leve\n5 = peligro serio."
+        "Del 1 al 5, ¿qué tan peligroso o urgente consideras este problema?\n1 = leve\n5 = peligro serio."
       );
       return;
     }
 
-    case "ESPERANDO_GRAVEDAD": {
+    // 7) PELIGRO PERCIBIDO (GRAVEDAD)
+    case "ESPERANDO_PELIGRO": {
       const gravedad = parseInt(text, 10);
       if (isNaN(gravedad) || gravedad < 1 || gravedad > 5) {
-        await sendMessage(phone, "Responde con un número del 1 al 5.");
-        return;
-      }
-
-      // Guardamos gravedad pero aún NO escribimos en Supabase
-      setUserState(phone, "ESPERANDO_FOTO", {
-        ...user.data,
-        gravedad,
-      });
-
-      await sendMessage(
-        phone,
-        "Si puedes, envía ahora una *foto del problema* (como imagen de WhatsApp). Si no tienes foto, responde con 'no'."
-      );
-      return;
-    }
-
-    case "ESPERANDO_FOTO": {
-      let foto_url = null;
-
-      // Si han mandado una imagen, la procesamos
-      if (image) {
-        foto_url = await guardarImagenEnSupabase(image);
-      } else if (text && text.toLowerCase() === "no") {
-        // Sin foto, seguimos
-        foto_url = null;
-      } else {
-        // Ni foto ni "no" -> insiste
         await sendMessage(
           phone,
-          "Envía una *foto del problema* o escribe 'no' si no quieres adjuntar imagen."
+          "Responde con un número del 1 al 5 para indicar el nivel de peligro."
         );
         return;
       }
 
-      const data = { ...user.data, foto_url };
-      const gravedad = data.gravedad;
-      const prioridad = calcularPrioridad(data);
+      const data = { ...user.data, gravedad };
+      const prioridad = calcularPrioridad(data); // interna
 
       console.log("Incidente registrado:", { phone, ...data, prioridad });
 
@@ -251,15 +451,15 @@ async function handleIncomingMessage(phone, text, location, image) {
         try {
           const { error } = await supabase.from("incidentes").insert({
             phone,
-            tipo: data.tipo,
-            zona: data.zona,
-            descripcion: data.descripcion,
-            ubicacion: data.ubicacion,
+            tipo: data.categoriaNombre,          // categoría principal
+            zona: data.detallesUbicacion,        // colonia / calles
+            descripcion: data.descripcion,       // descripción del problema
+            ubicacion: data.ubicacionGps,        // ubicación GPS
             gravedad: data.gravedad,
-            prioridad,
+            prioridad,                           // interno, no se muestra al usuario
             estado: "pendiente",
             foto_url: data.foto_url || null,
-            raw: data,
+            raw: data,                           // aquí va también la subcategoría
           });
 
           if (error) {
@@ -276,9 +476,12 @@ async function handleIncomingMessage(phone, text, location, image) {
 
       await sendMessage(
         phone,
-        `✅ Gracias, tu reporte fue registrado.\n\nTipo: ${data.tipo}\nZona: ${data.zona}\nGravedad: ${gravedad}\nPrioridad interna: ${prioridad}${
-          foto_url ? "\nFoto adjunta: ✔️" : ""
-        }\n\nUsaremos estos datos para mapear y priorizar la atención.`
+        `✅ Gracias, tu reporte fue registrado.\n\n` +
+          `Categoría: ${data.categoriaNombre}${
+            data.subcategoria ? " - " + data.subcategoria : ""
+          }\n` +
+          `Peligro percibido (1–5): ${gravedad}\n` +
+          `Foto adjunta: ${data.foto_url ? "✔️" : "✖️"}`
       );
 
       setUserState(phone, "IDLE", {});
@@ -296,10 +499,11 @@ async function handleIncomingMessage(phone, text, location, image) {
 }
 
 // =======================
-//  PRIORIDAD SIMPLE
+//  PRIORIDAD SIMPLE (INTERNA)
 // =======================
 
 function calcularPrioridad(data) {
+  // Puedes ajustar esta fórmula todo lo agresiva que quieras.
   return data.gravedad * 2;
 }
 

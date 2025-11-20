@@ -3,6 +3,7 @@
 import { createClient } from "@supabase/supabase-js";
 import express from "express";
 import fetch from "node-fetch";
+import { Buffer } from "node:buffer";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -17,20 +18,7 @@ if (supabaseUrl && supabaseKey) {
   console.warn("Supabase NO configurado (faltan SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY)");
 }
 
-
 app.use(express.json());
-
-// =======================
-//  RUTAS DE PRUEBA
-// =======================
-
-app.get("/", (req, res) => {
-  res.status(200).send("Tulum Reporta bot running");
-});
-
-app.get("/ping", (req, res) => {
-  res.status(200).send("pong");
-});
 
 // =======================
 //  ESTADO EN MEMORIA
@@ -53,6 +41,18 @@ function setUserState(phone, state, newData = {}) {
   };
   console.log("Nuevo estado usuario:", phone, userStates[phone]);
 }
+
+// =======================
+//  RUTAS DE PRUEBA
+// =======================
+
+app.get("/", (req, res) => {
+  res.status(200).send("Tulum Reporta bot running");
+});
+
+app.get("/ping", (req, res) => {
+  res.status(200).send("pong");
+});
 
 // =======================
 //  WEBHOOK VERIFICACIÓN (GET)
@@ -88,12 +88,14 @@ app.post("/webhook", async (req, res) => {
     if (messages && messages.length > 0) {
       const msg = messages[0];
       const from = msg.from; // número del usuario
+      const type = msg.type;
       const text = msg.text?.body?.trim() || "";
       const location = msg.location || null;
+      const image = msg.image || null;
 
-      console.log("Mensaje entrante:", { from, text, location });
-      await handleIncomingMessage(from, text, location);
+      console.log("Mensaje entrante:", { from, type, text, location, image });
 
+      await handleIncomingMessage(from, text, location, image);
     } else {
       console.log(
         "Webhook sin mensajes (posiblemente status u otro tipo de evento)"
@@ -111,7 +113,7 @@ app.post("/webhook", async (req, res) => {
 //  LÓGICA DEL BOT
 // =======================
 
-async function handleIncomingMessage(phone, text, location) {
+async function handleIncomingMessage(phone, text, location, image) {
   const user = getUserState(phone);
   console.log("handleIncomingMessage estado actual:", phone, user.state);
 
@@ -167,84 +169,121 @@ async function handleIncomingMessage(phone, text, location) {
       return;
     }
 
-   case "ESPERANDO_UBICACION": {
-  let ubicacionStr = text;
+    case "ESPERANDO_UBICACION": {
+      let ubicacionStr = text;
 
-  // Si viene una ubicación nativa de WhatsApp, la convertimos a algo útil
-  if (location) {
-    const { latitude, longitude, name, address } = location;
-    const coords = `${latitude},${longitude}`;
-    const mapsLink = `https://www.google.com/maps?q=${latitude},${longitude}`;
-    ubicacionStr = `${coords} ${name ? " - " + name : ""} ${address ? " - " + address : ""} (${mapsLink})`;
-  }
+      // Si viene una ubicación nativa de WhatsApp, la convertimos a algo útil
+      if (location) {
+        const { latitude, longitude, name, address } = location;
+        const coords = `${latitude},${longitude}`;
+        const mapsLink = `https://www.google.com/maps?q=${latitude},${longitude}`;
+        ubicacionStr = `${coords} ${name ? " - " + name : ""} ${
+          address ? " - " + address : ""
+        } (${mapsLink})`;
+      }
 
-  if (!ubicacionStr || ubicacionStr.trim() === "") {
-    await sendMessage(
-      phone,
-      "No pude leer la ubicación. Envía la ubicación desde WhatsApp (adjuntar → ubicación) o pega un enlace de Google Maps."
-    );
-    return;
-  }
+      if (!ubicacionStr || ubicacionStr.trim() === "") {
+        await sendMessage(
+          phone,
+          "No pude leer la ubicación. Envía la ubicación desde WhatsApp (adjuntar → ubicación) o pega un enlace de Google Maps."
+        );
+        return;
+      }
 
-  setUserState(phone, "ESPERANDO_GRAVEDAD", { ubicacion: ubicacionStr.trim() });
-  console.log("Ubicación registrada para", phone, "=>", ubicacionStr);
+      setUserState(phone, "ESPERANDO_GRAVEDAD", {
+        ubicacion: ubicacionStr.trim(),
+      });
+      console.log("Ubicación registrada para", phone, "=>", ubicacionStr);
 
-  await sendMessage(
-    phone,
-    "Del 1 al 5, ¿qué tan grave es?\n1 = leve\n5 = peligro serio."
-  );
-  return;
-}
-
-
-   case "ESPERANDO_GRAVEDAD": {
-  const gravedad = parseInt(text, 10);
-  if (isNaN(gravedad) || gravedad < 1 || gravedad > 5) {
-    await sendMessage(phone, "Responde con un número del 1 al 5.");
-    return;
-  }
-
-  const data = { ...user.data, gravedad };
-  const prioridad = calcularPrioridad(data);
-
-  console.log("Incidente registrado:", { phone, ...data, prioridad });
-
-  // 👉 Guardar en Supabase
-  if (supabase) {
-    try {
-      const { error } = await supabase.from("incidentes").insert({
+      await sendMessage(
         phone,
-        tipo: data.tipo,
-        zona: data.zona,
-        descripcion: data.descripcion,
-        ubicacion: data.ubicacion,
-        gravedad: data.gravedad,
-        prioridad,
-        estado: "pendiente",
-        raw: data
+        "Del 1 al 5, ¿qué tan grave es?\n1 = leve\n5 = peligro serio."
+      );
+      return;
+    }
+
+    case "ESPERANDO_GRAVEDAD": {
+      const gravedad = parseInt(text, 10);
+      if (isNaN(gravedad) || gravedad < 1 || gravedad > 5) {
+        await sendMessage(phone, "Responde con un número del 1 al 5.");
+        return;
+      }
+
+      // Guardamos gravedad pero aún NO escribimos en Supabase
+      setUserState(phone, "ESPERANDO_FOTO", {
+        ...user.data,
+        gravedad,
       });
 
-      if (error) {
-        console.error("Error guardando en Supabase:", error);
-      } else {
-        console.log("Incidente guardado en Supabase");
-      }
-    } catch (e) {
-      console.error("Excepción guardando en Supabase:", e);
+      await sendMessage(
+        phone,
+        "Si puedes, envía ahora una *foto del problema* (como imagen de WhatsApp). Si no tienes foto, responde con 'no'."
+      );
+      return;
     }
-  } else {
-    console.warn("Supabase no configurado, incidente NO guardado en BD");
-  }
 
-  await sendMessage(
-    phone,
-    `✅ Gracias, tu reporte fue registrado.\n\nTipo: ${data.tipo}\nZona: ${data.zona}\nGravedad: ${gravedad}\nPrioridad interna: ${prioridad}\n\nUsaremos estos datos para mapear y priorizar la atención.`
-  );
+    case "ESPERANDO_FOTO": {
+      let foto_url = null;
 
-  setUserState(phone, "IDLE", {});
-  return;
-}
+      // Si han mandado una imagen, la procesamos
+      if (image) {
+        foto_url = await guardarImagenEnSupabase(image);
+      } else if (text && text.toLowerCase() === "no") {
+        // Sin foto, seguimos
+        foto_url = null;
+      } else {
+        // Ni foto ni "no" -> insiste
+        await sendMessage(
+          phone,
+          "Envía una *foto del problema* o escribe 'no' si no quieres adjuntar imagen."
+        );
+        return;
+      }
 
+      const data = { ...user.data, foto_url };
+      const gravedad = data.gravedad;
+      const prioridad = calcularPrioridad(data);
+
+      console.log("Incidente registrado:", { phone, ...data, prioridad });
+
+      // Guardar en Supabase
+      if (supabase) {
+        try {
+          const { error } = await supabase.from("incidentes").insert({
+            phone,
+            tipo: data.tipo,
+            zona: data.zona,
+            descripcion: data.descripcion,
+            ubicacion: data.ubicacion,
+            gravedad: data.gravedad,
+            prioridad,
+            estado: "pendiente",
+            foto_url: data.foto_url || null,
+            raw: data,
+          });
+
+          if (error) {
+            console.error("Error guardando en Supabase:", error);
+          } else {
+            console.log("Incidente guardado en Supabase");
+          }
+        } catch (e) {
+          console.error("Excepción guardando en Supabase:", e);
+        }
+      } else {
+        console.warn("Supabase no configurado, incidente NO guardado en BD");
+      }
+
+      await sendMessage(
+        phone,
+        `✅ Gracias, tu reporte fue registrado.\n\nTipo: ${data.tipo}\nZona: ${data.zona}\nGravedad: ${gravedad}\nPrioridad interna: ${prioridad}${
+          foto_url ? "\nFoto adjunta: ✔️" : ""
+        }\n\nUsaremos estos datos para mapear y priorizar la atención.`
+      );
+
+      setUserState(phone, "IDLE", {});
+      return;
+    }
 
     default: {
       setUserState(phone, "IDLE", {});
@@ -311,6 +350,93 @@ async function sendMessage(to, text) {
     }
   } catch (e) {
     console.error("Excepción enviando mensaje:", e);
+  }
+}
+
+// =======================
+//  GUARDAR IMAGEN EN SUPABASE
+// =======================
+
+async function guardarImagenEnSupabase(image) {
+  if (!supabase) {
+    console.warn("Supabase no configurado, no se guarda la imagen.");
+    return null;
+  }
+
+  try {
+    const token = process.env.WHATSAPP_ACCESS_TOKEN;
+    if (!token) {
+      console.error("Falta WHATSAPP_ACCESS_TOKEN para descargar la imagen.");
+      return null;
+    }
+
+    const mediaId = image.id;
+
+    // 1) Pedir a Meta la URL temporal del media
+    const metaRes = await fetch(
+      `https://graph.facebook.com/v20.0/${mediaId}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!metaRes.ok) {
+      console.error("Error obteniendo metadata de media:", await metaRes.text());
+      return null;
+    }
+
+    const metaJson = await metaRes.json();
+    const mediaUrl = metaJson.url;
+    if (!mediaUrl) {
+      console.error("No se recibió URL de media desde WhatsApp.");
+      return null;
+    }
+
+    // 2) Descargar el binario de la imagen
+    const fileRes = await fetch(mediaUrl, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!fileRes.ok) {
+      console.error("Error descargando media:", await fileRes.text());
+      return null;
+    }
+
+    const arrayBuffer = await fileRes.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // 3) Subir a Supabase Storage
+    const ext = image.mime_type?.split("/")?.[1] || "jpg";
+    const fileName = `incidente-${Date.now()}-${mediaId}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("incidentes-fotos")
+      .upload(fileName, buffer, {
+        contentType: image.mime_type || "image/jpeg",
+        upsert: false,
+      });
+
+    if (uploadError) {
+      console.error("Error subiendo imagen a Supabase:", uploadError);
+      return null;
+    }
+
+    const { data: publicData } = supabase.storage
+      .from("incidentes-fotos")
+      .getPublicUrl(fileName);
+
+    const publicUrl = publicData?.publicUrl || null;
+    console.log("Imagen guardada en Supabase:", publicUrl);
+    return publicUrl;
+  } catch (e) {
+    console.error("Excepción guardando imagen en Supabase:", e);
+    return null;
   }
 }
 

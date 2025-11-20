@@ -108,7 +108,7 @@ const CATEGORIES = {
   },
   "0": {
     nombre: "Otro tipo de problema",
-    subcategorias: [], // aquí pediremos texto libre
+    subcategorias: [], // texto libre
   },
 };
 
@@ -271,7 +271,6 @@ async function handleIncomingMessage(phone, text, location, image) {
       let subcategoria;
 
       if (!categoria) {
-        // algo raro, reinicia
         setUserState(phone, "IDLE", {});
         await sendMessage(
           phone,
@@ -298,7 +297,6 @@ async function handleIncomingMessage(phone, text, location, image) {
         }
         subcategoria = categoria.subcategorias[idx - 1];
       } else {
-        // categoría "Otro tipo de problema": texto libre
         if (!text) {
           await sendMessage(
             phone,
@@ -363,64 +361,81 @@ async function handleIncomingMessage(phone, text, location, image) {
         return;
       }
 
-      setUserState(phone, "ESPERANDO_DETALLES_UBICACION", {
+      setUserState(phone, "ESPERANDO_UBICACION", {
         ...user.data,
         descripcion: text,
       });
 
       await sendMessage(
         phone,
-        "Ahora escribe *detalles de la ubicación*: colonia, calles cercanas o referencias del lugar."
+        "Ahora indica la *ubicación del problema*:\n\n" +
+          "- Puedes adjuntar la ubicación desde WhatsApp (ubicación en el mapa), o\n" +
+          "- Escribir la dirección textual (número, calle, colonia), o\n" +
+          "- Enviar las coordenadas en formato: latitud,longitud"
       );
       return;
     }
 
-    // 5) DETALLES DE LA UBICACIÓN (COLONIA, CALLES, REFERENCIAS)
-    case "ESPERANDO_DETALLES_UBICACION": {
-      if (!text) {
-        await sendMessage(
-          phone,
-          "Escribe colonia, calles cercanas o alguna referencia clara del lugar."
-        );
-        return;
-      }
+    // 5) UBICACIÓN (ADJUNTO O TEXTO / COORDENADAS)
+    case "ESPERANDO_UBICACION": {
+      let direccionTexto = null;
+      let ubicacionGps = null;
 
-      setUserState(phone, "ESPERANDO_UBICACION_GPS", {
-        ...user.data,
-        detallesUbicacion: text,
-      });
-
-      await sendMessage(
-        phone,
-        "Por favor envía la *ubicación GPS* del lugar (adjuntar → ubicación en WhatsApp o pegando las coordenadas en formato latitud,longitud)."
-      );
-      return;
-    }
-
-    // 6) UBICACIÓN GPS (SIN MENCIONAR GOOGLE MAPS)
-    case "ESPERANDO_UBICACION_GPS": {
-      let ubicacionGpsStr = text;
-
+      // Si viene ubicación nativa de WhatsApp
       if (location) {
         const { latitude, longitude, name, address } = location;
-        const coords = `${latitude},${longitude}`;
-        // No mencionamos enlaces ni Google Maps
-        ubicacionGpsStr = `${coords}${
-          name ? " - " + name : ""
-        }${address ? " - " + address : ""}`;
-      }
+        const lat = parseFloat(latitude);
+        const lon = parseFloat(longitude);
 
-      if (!ubicacionGpsStr || ubicacionGpsStr.trim() === "") {
+        if (!isCoordInTulum(lat, lon)) {
+          await sendMessage(
+            phone,
+            "Las coordenadas que enviaste no parecen estar dentro del municipio de Tulum.\nRevisa la ubicación y envía de nuevo la ubicación o la dirección (número, calle, colonia)."
+          );
+          return;
+        }
+
+        ubicacionGps = `${lat},${lon}`;
+        const labelParts = [];
+        if (name) labelParts.push(name);
+        if (address) labelParts.push(address);
+        direccionTexto = labelParts.join(" - ") || null;
+      } else if (text) {
+        // ¿Coincide con formato de coordenadas "lat,lon"?
+        const coordMatch = text.match(
+          /^\s*(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)\s*$/
+        );
+        if (coordMatch) {
+          const lat = parseFloat(coordMatch[1]);
+          const lon = parseFloat(coordMatch[3]);
+
+          if (!isCoordInTulum(lat, lon)) {
+            await sendMessage(
+              phone,
+              "Las coordenadas que enviaste no parecen estar dentro del municipio de Tulum.\nRevisa la ubicación y envía de nuevo la ubicación o la dirección (número, calle, colonia)."
+            );
+            return;
+          }
+
+          ubicacionGps = `${lat},${lon}`;
+          direccionTexto = null;
+        } else {
+          // No son coordenadas → tomamos texto como dirección
+          direccionTexto = text;
+          ubicacionGps = null;
+        }
+      } else {
         await sendMessage(
           phone,
-          "No pude leer la ubicación. Envía la ubicación GPS como adjunto o escribe las coordenadas en formato latitud,longitud."
+          "No pude leer la ubicación. Adjunta la ubicación en el mapa, escribe la dirección (número, calle, colonia) o envía las coordenadas en formato latitud,longitud."
         );
         return;
       }
 
       setUserState(phone, "ESPERANDO_PELIGRO", {
         ...user.data,
-        ubicacionGps: ubicacionGpsStr.trim(),
+        direccionTexto,
+        ubicacionGps,
       });
 
       await sendMessage(
@@ -430,7 +445,7 @@ async function handleIncomingMessage(phone, text, location, image) {
       return;
     }
 
-    // 7) PELIGRO PERCIBIDO (GRAVEDAD)
+    // 6) PELIGRO PERCIBIDO (GRAVEDAD)
     case "ESPERANDO_PELIGRO": {
       const gravedad = parseInt(text, 10);
       if (isNaN(gravedad) || gravedad < 1 || gravedad > 5) {
@@ -452,14 +467,14 @@ async function handleIncomingMessage(phone, text, location, image) {
           const { error } = await supabase.from("incidentes").insert({
             phone,
             tipo: data.categoriaNombre,          // categoría principal
-            zona: data.detallesUbicacion,        // colonia / calles
+            zona: data.direccionTexto || null,   // dirección textual
             descripcion: data.descripcion,       // descripción del problema
-            ubicacion: data.ubicacionGps,        // ubicación GPS
+            ubicacion: data.ubicacionGps || data.direccionTexto, // ubicación
             gravedad: data.gravedad,
-            prioridad,                           // interno, no se muestra al usuario
+            prioridad,                           // interno, NO se muestra al usuario
             estado: "pendiente",
             foto_url: data.foto_url || null,
-            raw: data,                           // aquí va también la subcategoría
+            raw: data,                           // incluye subcategoria, direccionTexto, ubicacionGps
           });
 
           if (error) {
@@ -503,8 +518,22 @@ async function handleIncomingMessage(phone, text, location, image) {
 // =======================
 
 function calcularPrioridad(data) {
-  // Puedes ajustar esta fórmula todo lo agresiva que quieras.
+  // Modificable. De momento, sólo depende del peligro percibido.
   return data.gravedad * 2;
+}
+
+// =======================
+//  VALIDACIÓN COORDENADAS TULUM
+// =======================
+//
+// Bounding box aproximado para el municipio de Tulum.
+// No es perfecto, pero evita cosas totalmente fuera (otro país, otro estado, etc.)
+//
+function isCoordInTulum(lat, lon) {
+  // latitud ~19–21 N, longitud ~ -88.5 a -86.0 W
+  if (lat < 19.0 || lat > 21.0) return false;
+  if (lon < -88.5 || lon > -86.0) return false;
+  return true;
 }
 
 // =======================

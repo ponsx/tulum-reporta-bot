@@ -381,7 +381,7 @@ async function handleIncomingMessage(phone, text, location, image) {
       let direccionTexto = null;
       let ubicacionGps = null;
 
-      // Si viene ubicación nativa de WhatsApp
+      // Ubicación nativa de WhatsApp
       if (location) {
         const { latitude, longitude, name, address } = location;
         const lat = parseFloat(latitude);
@@ -401,7 +401,7 @@ async function handleIncomingMessage(phone, text, location, image) {
         if (address) labelParts.push(address);
         direccionTexto = labelParts.join(" - ") || null;
       } else if (text) {
-        // ¿Coincide con formato de coordenadas "lat,lon"?
+        // ¿formato coordenadas "lat,lon"?
         const coordMatch = text.match(
           /^\s*(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)\s*$/
         );
@@ -420,7 +420,7 @@ async function handleIncomingMessage(phone, text, location, image) {
           ubicacionGps = `${lat},${lon}`;
           direccionTexto = null;
         } else {
-          // No son coordenadas → tomamos texto como dirección
+          // Texto como dirección
           direccionTexto = text;
           ubicacionGps = null;
         }
@@ -432,10 +432,33 @@ async function handleIncomingMessage(phone, text, location, image) {
         return;
       }
 
-      setUserState(phone, "ESPERANDO_PELIGRO", {
+      setUserState(phone, "ESPERANDO_REFERENCIAS", {
         ...user.data,
         direccionTexto,
         ubicacionGps,
+      });
+
+      await sendMessage(
+        phone,
+        "Para ayudar a encontrar el lugar exacto, escribe *referencias visuales específicas*, por ejemplo:\n" +
+          "“Frente a la tienda X”, “a un lado del Oxxo”, “lado derecho de la calle”, “esquina con la calle Y”, etc."
+      );
+      return;
+    }
+
+    // 6) REFERENCIAS VISUALES ESPECÍFICAS
+    case "ESPERANDO_REFERENCIAS": {
+      if (!text) {
+        await sendMessage(
+          phone,
+          "Escribe alguna referencia visual para encontrar el problema (frente a qué, esquina, lado de la calle, etc.)."
+        );
+        return;
+      }
+
+      setUserState(phone, "ESPERANDO_PELIGRO", {
+        ...user.data,
+        referencias: text,
       });
 
       await sendMessage(
@@ -445,7 +468,7 @@ async function handleIncomingMessage(phone, text, location, image) {
       return;
     }
 
-    // 6) PELIGRO PERCIBIDO (GRAVEDAD)
+    // 7) PELIGRO PERCIBIDO (GRAVEDAD)
     case "ESPERANDO_PELIGRO": {
       const gravedad = parseInt(text, 10);
       if (isNaN(gravedad) || gravedad < 1 || gravedad > 5) {
@@ -461,20 +484,25 @@ async function handleIncomingMessage(phone, text, location, image) {
 
       console.log("Incidente registrado:", { phone, ...data, prioridad });
 
+      // Construir "zona" combinando dirección textual + referencias
+      const zona = [data.direccionTexto, data.referencias]
+        .filter(Boolean)
+        .join(" | ") || null;
+
       // Guardar en Supabase
       if (supabase) {
         try {
           const { error } = await supabase.from("incidentes").insert({
             phone,
-            tipo: data.categoriaNombre,          // categoría principal
-            zona: data.direccionTexto || null,   // dirección textual
-            descripcion: data.descripcion,       // descripción del problema
-            ubicacion: data.ubicacionGps || data.direccionTexto, // ubicación
+            tipo: data.categoriaNombre,            // categoría principal
+            zona,                                  // dirección + referencias
+            descripcion: data.descripcion,         // descripción del problema
+            ubicacion: data.ubicacionGps || zona,  // ubicación (gps o texto)
             gravedad: data.gravedad,
-            prioridad,                           // interno, NO se muestra al usuario
+            prioridad,                             // interno, NO se muestra al usuario
             estado: "pendiente",
             foto_url: data.foto_url || null,
-            raw: data,                           // incluye subcategoria, direccionTexto, ubicacionGps
+            raw: data,                             // incluye subcategoria, direccionTexto, ubicacionGps, referencias
           });
 
           if (error) {
@@ -518,7 +546,7 @@ async function handleIncomingMessage(phone, text, location, image) {
 // =======================
 
 function calcularPrioridad(data) {
-  // Modificable. De momento, sólo depende del peligro percibido.
+  // Por ahora, simple: proporcional al peligro percibido
   return data.gravedad * 2;
 }
 
@@ -527,7 +555,7 @@ function calcularPrioridad(data) {
 // =======================
 //
 // Bounding box aproximado para el municipio de Tulum.
-// No es perfecto, pero evita cosas totalmente fuera (otro país, otro estado, etc.)
+// Suficiente para filtrar cosas absurdamente fuera.
 //
 function isCoordInTulum(lat, lon) {
   // latitud ~19–21 N, longitud ~ -88.5 a -86.0 W

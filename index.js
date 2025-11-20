@@ -7,6 +7,11 @@ import { Buffer } from "node:buffer";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// URL base pública del mapa (para el link que se envía al usuario)
+const MAP_BASE_URL =
+  process.env.PUBLIC_MAP_BASE_URL || "https://tulumreporta.com/mapa";
+
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -15,7 +20,9 @@ if (supabaseUrl && supabaseKey) {
   supabase = createClient(supabaseUrl, supabaseKey);
   console.log("Supabase inicializado");
 } else {
-  console.warn("Supabase NO configurado (faltan SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY)");
+  console.warn(
+    "Supabase NO configurado (faltan SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY)"
+  );
 }
 
 app.use(express.json());
@@ -113,7 +120,7 @@ const CATEGORIES = {
 };
 
 // =======================
-//  ESTADO EN MEMORIA
+// ESTADO EN MEMORIA
 // =======================
 
 const userStates = {}; // { phone: { state, data } }
@@ -147,162 +154,72 @@ app.get("/ping", (req, res) => {
 });
 
 // =======================
-//  MAPA (HTML) + API INCIDENTES
+//  API PARA EL MAPA
 // =======================
 
-// API JSON con incidentes que tienen coordenadas válidas
+// Devuelve todos los incidentes en JSON para el mapa
 app.get("/api/incidentes", async (req, res) => {
   if (!supabase) {
-    return res.status(500).json({ error: "Supabase no configurado" });
+    return res
+      .status(500)
+      .json({ error: "Supabase no configurado en el servidor" });
   }
 
   try {
-    // Saca todos los incidentes (puedes filtrar por estado, fecha, etc.)
     const { data, error } = await supabase
       .from("incidentes")
-      .select("id, tipo, zona, descripcion, ubicacion, gravedad, estado, foto_url, created_at")
+      .select(
+        "id, tipo, descripcion, gravedad, estado, foto_url, zona, ubicacion, created_at, raw"
+      )
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("Error leyendo incidentes de Supabase:", error);
+      console.error("Error leyendo incidentes:", error);
       return res.status(500).json({ error: "Error leyendo incidentes" });
     }
 
-    const puntos = (data || [])
-      .map((row) => {
-        const coords = parseUbicacionToLatLon(row.ubicacion);
-        if (!coords) return null;
-        const { lat, lon } = coords;
+    const incidentes = (data || []).map((row) => {
+      let lat = null;
+      let lon = null;
 
-        // opcional: volvemos a filtrar por bounding box de Tulum
-        if (!isCoordInTulum(lat, lon)) return null;
+      // 1) Intentar sacar coordenadas desde raw.ubicacionGps
+      let coordString =
+        (row.raw && row.raw.ubicacionGps) ||
+        (typeof row.ubicacion === "string" ? row.ubicacion : null);
 
-        return {
-          id: row.id,
-          tipo: row.tipo,
-          zona: row.zona,
-          descripcion: row.descripcion,
-          gravedad: row.gravedad,
-          estado: row.estado,
-          foto_url: row.foto_url,
-          created_at: row.created_at,
-          lat,
-          lon,
-        };
-      })
-      .filter(Boolean);
+      if (coordString) {
+        const m = String(coordString).match(
+          /^\s*(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)\s*$/
+        );
+        if (m) {
+          lat = parseFloat(m[1]);
+          lon = parseFloat(m[3]);
+        }
+      }
 
-    return res.json(puntos);
+      return {
+        id: row.id,
+        tipo: row.tipo,
+        descripcion: row.descripcion,
+        gravedad: row.gravedad,
+        estado: row.estado,
+        foto_url: row.foto_url,
+        zona: row.zona,
+        lat,
+        lon,
+        created_at: row.created_at,
+      };
+    });
+
+    res.json(incidentes);
   } catch (e) {
-    console.error("Excepción en /api/incidentes:", e);
-    return res.status(500).json({ error: "Excepción en el servidor" });
+    console.error("Excepción leyendo incidentes:", e);
+    res.status(500).json({ error: "Error inesperado leyendo incidentes" });
   }
 });
 
-// Página sencilla con Leaflet que pinta los incidentes del API
-app.get("/map", (req, res) => {
-  const html = `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <title>Tulum Reporta - Mapa de incidentes</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obtrr0Xh0="
-    crossorigin=""
-  />
-  <style>
-    html, body {
-      height: 100%;
-      margin: 0;
-      padding: 0;
-    }
-    #map {
-      width: 100%;
-      height: 100vh;
-    }
-    .popup-content {
-      font-size: 14px;
-      line-height: 1.3;
-    }
-    .popup-content img {
-      max-width: 200px;
-      display: block;
-      margin-top: 4px;
-      border-radius: 4px;
-    }
-  </style>
-</head>
-<body>
-  <div id="map"></div>
-
-  <script
-    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-    crossorigin=""
-  ></script>
-  <script>
-    // Centro aproximado de Tulum
-    const map = L.map('map').setView([20.211, -87.465], 13);
-
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
-
-    fetch('/api/incidentes')
-      .then(r => r.json())
-      .then(puntos => {
-        if (!Array.isArray(puntos) || puntos.length === 0) return;
-
-        const markers = [];
-
-        puntos.forEach(p => {
-          const marker = L.marker([p.lat, p.lon]).addTo(map);
-
-          let popupHtml = '<div class="popup-content">';
-          popupHtml += '<strong>' + (p.tipo || 'Sin categoría') + '</strong><br/>';
-
-          if (p.descripcion) {
-            popupHtml += '<em>' + p.descripcion + '</em><br/>';
-          }
-
-          if (p.zona) {
-            popupHtml += '<small>Zona: ' + p.zona + '</small><br/>';
-          }
-
-          popupHtml += 'Gravedad: ' + (p.gravedad ?? '-') + '<br/>';
-          popupHtml += 'Estado: ' + (p.estado || '-') + '<br/>';
-
-          if (p.foto_url) {
-            popupHtml += '<img src="' + p.foto_url + '" alt="Foto incidente" />';
-          }
-
-          popupHtml += '</div>';
-
-          marker.bindPopup(popupHtml);
-          markers.push(marker);
-        });
-
-        // Ajusta vista a los marcadores
-        const group = L.featureGroup(markers);
-        map.fitBounds(group.getBounds().pad(0.2));
-      })
-      .catch(err => {
-        console.error('Error al cargar incidentes:', err);
-      });
-  </script>
-</body>
-</html>`;
-
-  res.setHeader("Content-Type", "text/html; charset=utf-8");
-  res.send(html);
-});
-
 // =======================
-//  WEBHOOK VERIFICACIÓN (GET)
+// WEBHOOK VERIFICACIÓN (GET)
 // =======================
 
 app.get("/webhook", (req, res) => {
@@ -315,12 +232,11 @@ app.get("/webhook", (req, res) => {
   if (challenge) {
     return res.status(200).send(challenge);
   }
-
   return res.status(200).send("ok");
 });
 
 // =======================
-//  WEBHOOK MENSAJES (POST)
+// WEBHOOK MENSAJES (POST)
 // =======================
 
 app.post("/webhook", async (req, res) => {
@@ -357,7 +273,7 @@ app.post("/webhook", async (req, res) => {
 });
 
 // =======================
-//  LÓGICA DEL BOT
+// LÓGICA DEL BOT
 // =======================
 
 async function handleIncomingMessage(phone, text, location, image) {
@@ -405,6 +321,7 @@ async function handleIncomingMessage(phone, text, location, image) {
         const subMenu = categoria.subcategorias
           .map((s, idx) => `${idx + 1}. ${s}`)
           .join("\n");
+
         await sendMessage(
           phone,
           `Has elegido: *${categoria.nombre}*\nAhora elige una opción:\n${subMenu}`
@@ -422,7 +339,6 @@ async function handleIncomingMessage(phone, text, location, image) {
     case "ESPERANDO_SUBCATEGORIA": {
       const { categoriaClave } = user.data;
       const categoria = CATEGORIES[categoriaClave];
-
       let subcategoria;
 
       if (!categoria) {
@@ -485,7 +401,6 @@ async function handleIncomingMessage(phone, text, location, image) {
       }
 
       const foto_url = await guardarImagenEnSupabase(image);
-
       if (!foto_url) {
         await sendMessage(
           phone,
@@ -551,6 +466,7 @@ async function handleIncomingMessage(phone, text, location, image) {
         }
 
         ubicacionGps = `${lat},${lon}`;
+
         const labelParts = [];
         if (name) labelParts.push(name);
         if (address) labelParts.push(address);
@@ -640,30 +556,37 @@ async function handleIncomingMessage(phone, text, location, image) {
       console.log("Incidente registrado:", { phone, ...data, prioridad });
 
       // Construir "zona" combinando dirección textual + referencias
-      const zona = [data.direccionTexto, data.referencias]
-        .filter(Boolean)
-        .join(" | ") || null;
+      const zona =
+        [data.direccionTexto, data.referencias].filter(Boolean).join(" | ") ||
+        null;
+
+      let incidenteId = null;
 
       // Guardar en Supabase
       if (supabase) {
         try {
-          const { error } = await supabase.from("incidentes").insert({
-            phone,
-            tipo: data.categoriaNombre,            // categoría principal
-            zona,                                  // dirección + referencias
-            descripcion: data.descripcion,         // descripción del problema
-            ubicacion: data.ubicacionGps || zona,  // ubicación (gps o texto)
-            gravedad: data.gravedad,
-            prioridad,                             // interno, NO se muestra al usuario
-            estado: "pendiente",
-            foto_url: data.foto_url || null,
-            raw: data,                             // incluye subcategoria, direccionTexto, ubicacionGps, referencias
-          });
+          const { data: inserted, error } = await supabase
+            .from("incidentes")
+            .insert({
+              phone,
+              tipo: data.categoriaNombre, // categoría principal
+              zona, // dirección + referencias
+              descripcion: data.descripcion, // descripción del problema
+              ubicacion: data.ubicacionGps || zona, // ubicación (gps o texto)
+              gravedad: data.gravedad,
+              prioridad, // interno, NO se muestra al usuario
+              estado: "pendiente",
+              foto_url: data.foto_url || null,
+              raw: data, // incluye subcategoria, direccionTexto, ubicacionGps, referencias
+            })
+            .select()
+            .single();
 
           if (error) {
             console.error("Error guardando en Supabase:", error);
           } else {
-            console.log("Incidente guardado en Supabase");
+            console.log("Incidente guardado en Supabase:", inserted.id);
+            incidenteId = inserted.id;
           }
         } catch (e) {
           console.error("Excepción guardando en Supabase:", e);
@@ -672,15 +595,21 @@ async function handleIncomingMessage(phone, text, location, image) {
         console.warn("Supabase no configurado, incidente NO guardado en BD");
       }
 
-      await sendMessage(
-        phone,
-        `✅ Gracias, tu reporte fue registrado.\n\n` +
-          `Categoría: ${data.categoriaNombre}${
-            data.subcategoria ? " - " + data.subcategoria : ""
-          }\n` +
-          `Peligro percibido (1–5): ${gravedad}\n` +
-          `Foto adjunta: ${data.foto_url ? "✔️" : "✖️"}`
-      );
+      // Construir mensaje de confirmación al usuario
+      let mensaje = "✅ Gracias, tu reporte fue registrado.\n\n";
+      mensaje += `• Categoría: *${data.categoriaNombre}${
+        data.subcategoria ? " - " + data.subcategoria : ""
+      }*\n`;
+      mensaje += `• Peligro percibido (1–5): *${gravedad}*\n`;
+      mensaje += `• Foto adjunta: ${data.foto_url ? "✔️" : "✖️"}`;
+
+      // Si tenemos ID del incidente, añadimos link al mapa
+      if (incidenteId) {
+        const link = `${MAP_BASE_URL}?id=${incidenteId}`;
+        mensaje += `\n\nPuedes ver tu reporte en el mapa aquí:\n${link}`;
+      }
+
+      await sendMessage(phone, mensaje);
 
       setUserState(phone, "IDLE", {});
       return;
@@ -697,7 +626,7 @@ async function handleIncomingMessage(phone, text, location, image) {
 }
 
 // =======================
-//  PRIORIDAD SIMPLE (INTERNA)
+// PRIORIDAD SIMPLE (INTERNA)
 // =======================
 
 function calcularPrioridad(data) {
@@ -706,12 +635,11 @@ function calcularPrioridad(data) {
 }
 
 // =======================
-//  VALIDACIÓN COORDENADAS TULUM
+// VALIDACIÓN COORDENADAS TULUM
 // =======================
-//
+
 // Bounding box aproximado para el municipio de Tulum.
 // Suficiente para filtrar cosas absurdamente fuera.
-//
 function isCoordInTulum(lat, lon) {
   // latitud ~19–21 N, longitud ~ -88.5 a -86.0 W
   if (lat < 19.0 || lat > 21.0) return false;
@@ -720,21 +648,7 @@ function isCoordInTulum(lat, lon) {
 }
 
 // =======================
-//  PARSEAR UBICACIÓN A COORDENADAS
-// =======================
-
-function parseUbicacionToLatLon(ubicacion) {
-  if (!ubicacion || typeof ubicacion !== "string") return null;
-  const m = ubicacion.match(/^\s*(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)\s*$/);
-  if (!m) return null;
-  const lat = parseFloat(m[1]);
-  const lon = parseFloat(m[3]);
-  if (Number.isNaN(lat) || Number.isNaN(lon)) return null;
-  return { lat, lon };
-}
-
-// =======================
-//  ENVÍO DE MENSAJES
+// ENVÍO DE MENSAJES
 // =======================
 
 async function sendMessage(to, text) {
@@ -784,7 +698,7 @@ async function sendMessage(to, text) {
 }
 
 // =======================
-//  GUARDAR IMAGEN EN SUPABASE
+// GUARDAR IMAGEN EN SUPABASE
 // =======================
 
 async function guardarImagenEnSupabase(image) {
@@ -796,7 +710,9 @@ async function guardarImagenEnSupabase(image) {
   try {
     const token = process.env.WHATSAPP_ACCESS_TOKEN;
     if (!token) {
-      console.error("Falta WHATSAPP_ACCESS_TOKEN para descargar la imagen.");
+      console.error(
+        "Falta WHATSAPP_ACCESS_TOKEN para descargar la imagen."
+      );
       return null;
     }
 
@@ -807,14 +723,15 @@ async function guardarImagenEnSupabase(image) {
       `https://graph.facebook.com/v20.0/${mediaId}`,
       {
         method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       }
     );
 
     if (!metaRes.ok) {
-      console.error("Error obteniendo metadata de media:", await metaRes.text());
+      console.error(
+        "Error obteniendo metadata de media:",
+        await metaRes.text()
+      );
       return null;
     }
 
@@ -828,13 +745,14 @@ async function guardarImagenEnSupabase(image) {
     // 2) Descargar el binario de la imagen
     const fileRes = await fetch(mediaUrl, {
       method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { Authorization: `Bearer ${token}` },
     });
 
     if (!fileRes.ok) {
-      console.error("Error descargando media:", await fileRes.text());
+      console.error(
+        "Error descargando media:",
+        await fileRes.text()
+      );
       return null;
     }
 
@@ -871,7 +789,7 @@ async function guardarImagenEnSupabase(image) {
 }
 
 // =======================
-//  ARRANQUE DEL SERVIDOR
+// ARRANQUE DEL SERVIDOR
 // =======================
 
 app.listen(PORT, () => {

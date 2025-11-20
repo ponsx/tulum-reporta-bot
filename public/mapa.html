@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Mapa de reportes - Tulum Reporta</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- Leaflet CSS -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+      }
+
+      #map {
+        width: 100%;
+        height: 100vh;
+      }
+
+      .leaflet-popup-content {
+        font-size: 14px;
+      }
+
+      .popup-titulo {
+        font-weight: 600;
+        margin-bottom: 4px;
+      }
+
+      .popup-detalle {
+        margin: 2px 0;
+      }
+
+      .popup-detalle small {
+        color: #666;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+
+    <!-- Leaflet JS -->
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+
+    <script>
+      // Punto de partida aproximado: Tulum
+      const map = L.map("map").setView([20.214, -87.45], 12);
+
+      // Capa base OpenStreetMap
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      }).addTo(map);
+
+      // Fetch a tu API del backend
+      fetch("/api/incidentes")
+        .then((res) => res.json())
+        .then((incidentes) => {
+          const markersById = {};
+          const bounds = [];
+
+          incidentes.forEach((inc) => {
+            if (inc.lat && inc.lon) {
+              const marker = L.marker([inc.lat, inc.lon]).addTo(map);
+
+              const desc = inc.descripcion ? inc.descripcion : "";
+              const zona = inc.zona ? inc.zona : "";
+              const gravedad =
+                typeof inc.gravedad === "number" ? inc.gravedad : null;
+
+              const popupHtml = `
+                <div>
+                  <div class="popup-titulo">${inc.tipo || "Reporte"}</div>
+                  ${
+                    desc
+                      ? `<div class="popup-detalle">${desc}</div>`
+                      : ""
+                  }
+                  ${
+                    gravedad
+                      ? `<div class="popup-detalle"><small>Peligro percibido: ${gravedad}/5</small></div>`
+                      : ""
+                  }
+                  ${
+                    zona
+                      ? `<div class="popup-detalle"><small>Zona: ${zona}</small></div>`
+                      : ""
+                  }
+                  ${
+                    inc.foto_url
+                      ? `<div class="popup-detalle"><a href="${inc.foto_url}" target="_blank" rel="noopener noreferrer">Ver foto</a></div>`
+                      : ""
+                  }
+                </div>
+              `;
+
+              marker.bindPopup(popupHtml);
+              markersById[inc.id] = marker;
+              bounds.push([inc.lat, inc.lon]);
+            }
+          });
+
+          // Ajustar vista al conjunto de marcadores si hay varios
+          if (bounds.length > 0) {
+            map.fitBounds(bounds, { padding: [40, 40] });
+          }
+
+          // Si viene ?id= en la URL, centrar y abrir ese incidente
+          const params = new URLSearchParams(window.location.search);
+          const targetId = params.get("id");
+          if (targetId && markersById[targetId]) {
+            const m = markersById[targetId];
+            map.setView(m.getLatLng(), 17);
+            m.openPopup();
+          }
+        })
+        .catch((err) => {
+          console.error("Error cargando incidentes para el mapa:", err);
+        });
+    </script>
+  </body>
+</html>

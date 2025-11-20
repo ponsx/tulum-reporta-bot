@@ -147,6 +147,161 @@ app.get("/ping", (req, res) => {
 });
 
 // =======================
+//  MAPA (HTML) + API INCIDENTES
+// =======================
+
+// API JSON con incidentes que tienen coordenadas válidas
+app.get("/api/incidentes", async (req, res) => {
+  if (!supabase) {
+    return res.status(500).json({ error: "Supabase no configurado" });
+  }
+
+  try {
+    // Saca todos los incidentes (puedes filtrar por estado, fecha, etc.)
+    const { data, error } = await supabase
+      .from("incidentes")
+      .select("id, tipo, zona, descripcion, ubicacion, gravedad, estado, foto_url, created_at")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error leyendo incidentes de Supabase:", error);
+      return res.status(500).json({ error: "Error leyendo incidentes" });
+    }
+
+    const puntos = (data || [])
+      .map((row) => {
+        const coords = parseUbicacionToLatLon(row.ubicacion);
+        if (!coords) return null;
+        const { lat, lon } = coords;
+
+        // opcional: volvemos a filtrar por bounding box de Tulum
+        if (!isCoordInTulum(lat, lon)) return null;
+
+        return {
+          id: row.id,
+          tipo: row.tipo,
+          zona: row.zona,
+          descripcion: row.descripcion,
+          gravedad: row.gravedad,
+          estado: row.estado,
+          foto_url: row.foto_url,
+          created_at: row.created_at,
+          lat,
+          lon,
+        };
+      })
+      .filter(Boolean);
+
+    return res.json(puntos);
+  } catch (e) {
+    console.error("Excepción en /api/incidentes:", e);
+    return res.status(500).json({ error: "Excepción en el servidor" });
+  }
+});
+
+// Página sencilla con Leaflet que pinta los incidentes del API
+app.get("/map", (req, res) => {
+  const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Tulum Reporta - Mapa de incidentes</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obtrr0Xh0="
+    crossorigin=""
+  />
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    #map {
+      width: 100%;
+      height: 100vh;
+    }
+    .popup-content {
+      font-size: 14px;
+      line-height: 1.3;
+    }
+    .popup-content img {
+      max-width: 200px;
+      display: block;
+      margin-top: 4px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+  <script>
+    // Centro aproximado de Tulum
+    const map = L.map('map').setView([20.211, -87.465], 13);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    fetch('/api/incidentes')
+      .then(r => r.json())
+      .then(puntos => {
+        if (!Array.isArray(puntos) || puntos.length === 0) return;
+
+        const markers = [];
+
+        puntos.forEach(p => {
+          const marker = L.marker([p.lat, p.lon]).addTo(map);
+
+          let popupHtml = '<div class="popup-content">';
+          popupHtml += '<strong>' + (p.tipo || 'Sin categoría') + '</strong><br/>';
+
+          if (p.descripcion) {
+            popupHtml += '<em>' + p.descripcion + '</em><br/>';
+          }
+
+          if (p.zona) {
+            popupHtml += '<small>Zona: ' + p.zona + '</small><br/>';
+          }
+
+          popupHtml += 'Gravedad: ' + (p.gravedad ?? '-') + '<br/>';
+          popupHtml += 'Estado: ' + (p.estado || '-') + '<br/>';
+
+          if (p.foto_url) {
+            popupHtml += '<img src="' + p.foto_url + '" alt="Foto incidente" />';
+          }
+
+          popupHtml += '</div>';
+
+          marker.bindPopup(popupHtml);
+          markers.push(marker);
+        });
+
+        // Ajusta vista a los marcadores
+        const group = L.featureGroup(markers);
+        map.fitBounds(group.getBounds().pad(0.2));
+      })
+      .catch(err => {
+        console.error('Error al cargar incidentes:', err);
+      });
+  </script>
+</body>
+</html>`;
+
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  res.send(html);
+});
+
+// =======================
 //  WEBHOOK VERIFICACIÓN (GET)
 // =======================
 
@@ -562,6 +717,20 @@ function isCoordInTulum(lat, lon) {
   if (lat < 19.0 || lat > 21.0) return false;
   if (lon < -88.5 || lon > -86.0) return false;
   return true;
+}
+
+// =======================
+//  PARSEAR UBICACIÓN A COORDENADAS
+// =======================
+
+function parseUbicacionToLatLon(ubicacion) {
+  if (!ubicacion || typeof ubicacion !== "string") return null;
+  const m = ubicacion.match(/^\s*(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)\s*$/);
+  if (!m) return null;
+  const lat = parseFloat(m[1]);
+  const lon = parseFloat(m[3]);
+  if (Number.isNaN(lat) || Number.isNaN(lon)) return null;
+  return { lat, lon };
 }
 
 // =======================

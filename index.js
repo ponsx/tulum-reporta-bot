@@ -75,6 +75,11 @@ app.get("/webhook", (req, res) => {
 // =======================
 //  WEBHOOK MENSAJES (POST)
 // =======================
+//
+// Importante: procesamos *todos* los mensajes del array `messages`.
+// Si el usuario manda varias fotos en un solo envío, Meta las manda
+// como varios mensajes. Aquí los iteramos y marcamos el último (isLast).
+// =======================
 
 app.post("/webhook", async (req, res) => {
   try {
@@ -83,23 +88,24 @@ app.post("/webhook", async (req, res) => {
 
     const entry = req.body.entry?.[0];
     const changes = entry?.changes?.[0];
-    const messages = changes?.value?.messages;
+    const messages = changes?.value?.messages || [];
 
-    if (messages && messages.length > 0) {
-      const msg = messages[0];
-      const from = msg.from; // número del usuario
+    if (messages.length === 0) {
+      console.log("Webhook sin mensajes (posiblemente status u otro tipo de evento)");
+    }
+
+    for (let i = 0; i < messages.length; i++) {
+      const msg = messages[i];
+      const from = msg.from;
       const type = msg.type;
       const text = msg.text?.body?.trim() || "";
       const location = msg.location || null;
       const image = msg.image || null;
+      const isLast = i === messages.length - 1; // <- último mensaje de este lote
 
-      console.log("Mensaje entrante:", { from, type, text, location, image });
+      console.log("Mensaje entrante:", { from, type, text, location, image, isLast });
 
-      await handleIncomingMessage(from, text, location, image);
-    } else {
-      console.log(
-        "Webhook sin mensajes (posiblemente status u otro tipo de evento)"
-      );
+      await handleIncomingMessage(from, text, location, image, isLast);
     }
   } catch (err) {
     console.error("Error procesando webhook:", err);
@@ -113,7 +119,7 @@ app.post("/webhook", async (req, res) => {
 //  LÓGICA DEL BOT
 // =======================
 
-async function handleIncomingMessage(phone, text, location, image) {
+async function handleIncomingMessage(phone, text, location, image, isLast = false) {
   const user = getUserState(phone);
   console.log("handleIncomingMessage estado actual:", phone, user.state);
 
@@ -128,6 +134,9 @@ async function handleIncomingMessage(phone, text, location, image) {
   }
 
   switch (user.state) {
+    // -----------------------
+    //  SELECCIÓN DE TIPO
+    // -----------------------
     case "ESPERANDO_TIPO": {
       const tipoMap = {
         "1": "Bache / camino",
@@ -151,6 +160,9 @@ async function handleIncomingMessage(phone, text, location, image) {
       return;
     }
 
+    // -----------------------
+    //  ZONA
+    // -----------------------
     case "ESPERANDO_ZONA": {
       setUserState(phone, "ESPERANDO_DESCRIPCION", { zona: text });
       await sendMessage(
@@ -160,6 +172,9 @@ async function handleIncomingMessage(phone, text, location, image) {
       return;
     }
 
+    // -----------------------
+    //  DESCRIPCIÓN
+    // -----------------------
     case "ESPERANDO_DESCRIPCION": {
       setUserState(phone, "ESPERANDO_UBICACION", { descripcion: text });
       await sendMessage(
@@ -169,6 +184,9 @@ async function handleIncomingMessage(phone, text, location, image) {
       return;
     }
 
+    // -----------------------
+    //  UBICACIÓN
+    // -----------------------
     case "ESPERANDO_UBICACION": {
       let ubicacionStr = text;
 
@@ -202,6 +220,9 @@ async function handleIncomingMessage(phone, text, location, image) {
       return;
     }
 
+    // -----------------------
+    //  GRAVEDAD → PASO A FOTOS
+    // -----------------------
     case "ESPERANDO_GRAVEDAD": {
       const gravedad = parseInt(text, 10);
       if (isNaN(gravedad) || gravedad < 1 || gravedad > 5) {
@@ -209,40 +230,55 @@ async function handleIncomingMessage(phone, text, location, image) {
         return;
       }
 
-      // Guardamos gravedad pero aún NO escribimos en Supabase
+      // Preparamos el estado para recibir una o varias fotos en un solo envío
       setUserState(phone, "ESPERANDO_FOTO", {
         ...user.data,
         gravedad,
+        fotos: [],
       });
 
       await sendMessage(
         phone,
-        "Si puedes, envía ahora una *foto del problema* (como imagen de WhatsApp). Si no tienes foto, responde con 'no'."
+        "Si puedes, envía ahora una o varias *fotos del problema* en un solo envío."
       );
       return;
     }
 
+    // -----------------------
+    //  FOTOS (MÚLTIPLES EN UN SOLO ENVÍO)
+    // -----------------------
     case "ESPERANDO_FOTO": {
-      let foto_url = null;
+      let data = user.data;
 
-      // Si han mandado una imagen, la procesamos
+      // 1) Si llega una imagen, la guardamos en Supabase y la añadimos al array
       if (image) {
-        foto_url = await guardarImagenEnSupabase(image);
-      } else if (text && text.toLowerCase() === "no") {
-        // Sin foto, seguimos
-        foto_url = null;
+        const fotoUrl = await guardarImagenEnSupabase(image);
+        if (fotoUrl) {
+          const fotos = data.fotos || [];
+          fotos.push(fotoUrl);
+
+          data = { ...data, fotos };
+          setUserState(phone, "ESPERANDO_FOTO", data);
+        }
+
+        // Si no es el último mensaje del lote, solo acumulamos y salimos
+        if (!isLast) {
+          return;
+        }
       } else {
-        // Ni foto ni "no" -> insiste
-        await sendMessage(
-          phone,
-          "Envía una *foto del problema* o escribe 'no' si no quieres adjuntar imagen."
-        );
-        return;
+        // No es imagen
+        // Si no es el último mensaje del lote, ignoramos este mensaje
+        if (!isLast) {
+          return;
+        }
+        // Si es el último y quizás no hubo imágenes, seguimos y cerramos reporte
       }
 
-      const data = { ...user.data, foto_url };
+      // 2) Aquí llegamos SOLO cuando es el último mensaje de este lote
+      data = getUserState(phone).data; // estado más reciente
       const gravedad = data.gravedad;
       const prioridad = calcularPrioridad(data);
+      const fotos = data.fotos || [];
 
       console.log("Incidente registrado:", { phone, ...data, prioridad });
 
@@ -258,7 +294,7 @@ async function handleIncomingMessage(phone, text, location, image) {
             gravedad: data.gravedad,
             prioridad,
             estado: "pendiente",
-            foto_url: data.foto_url || null,
+            fotos, // array de URLs
             raw: data,
           });
 
@@ -274,23 +310,27 @@ async function handleIncomingMessage(phone, text, location, image) {
         console.warn("Supabase no configurado, incidente NO guardado en BD");
       }
 
+      const numFotos = fotos.length;
+
       await sendMessage(
         phone,
-        `✅ Gracias, tu reporte fue registrado.\n\nTipo: ${data.tipo}\nZona: ${data.zona}\nGravedad: ${gravedad}\nPrioridad interna: ${prioridad}${
-          foto_url ? "\nFoto adjunta: ✔️" : ""
-        }\n\nUsaremos estos datos para mapear y priorizar la atención.`
+        `✅ Gracias, tu reporte fue registrado.\n\nTipo: ${data.tipo}\nZona: ${data.zona}\nGravedad: ${gravedad}\nPrioridad interna: ${prioridad}\nFotos adjuntas: ${numFotos}`
       );
 
       setUserState(phone, "IDLE", {});
       return;
     }
 
+    // -----------------------
+    //  DEFAULT
+    // -----------------------
     default: {
       setUserState(phone, "IDLE", {});
       await sendMessage(
         phone,
         "He reiniciado la conversación. Escribe cualquier cosa para empezar un nuevo reporte."
       );
+      return;
     }
   }
 }

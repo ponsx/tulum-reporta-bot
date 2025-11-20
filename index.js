@@ -683,4 +683,131 @@ async function sendMessage(to, text) {
     return;
   }
 
-  const url = `https://graph.facebook.com/v20.0/${phone
+  const url = `https://graph.facebook.com/v20.0/${phoneId}/messages`;
+
+  const payload = {
+    messaging_product: "whatsapp",
+    to,
+    type: "text",
+    text: { body: text },
+  };
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const body = await res.text();
+    console.log("Respuesta API WhatsApp:", res.status, body);
+
+    if (!res.ok) {
+      console.error("Error al enviar mensaje:", body);
+    }
+  } catch (e) {
+    console.error("Excepción enviando mensaje:", e);
+  }
+}
+
+// =======================
+// GUARDAR IMAGEN EN SUPABASE
+// =======================
+
+async function guardarImagenEnSupabase(image) {
+  if (!supabase) {
+    console.warn("Supabase no configurado, no se guarda la imagen.");
+    return null;
+  }
+
+  try {
+    const token = process.env.WHATSAPP_ACCESS_TOKEN;
+    if (!token) {
+      console.error(
+        "Falta WHATSAPP_ACCESS_TOKEN para descargar la imagen."
+      );
+      return null;
+    }
+
+    const mediaId = image.id;
+
+    // 1) Metadatos del media
+    const metaRes = await fetch(
+      `https://graph.facebook.com/v20.0/${mediaId}`,
+      {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    if (!metaRes.ok) {
+      console.error(
+        "Error obteniendo metadata de media:",
+        await metaRes.text()
+      );
+      return null;
+    }
+
+    const metaJson = await metaRes.json();
+    const mediaUrl = metaJson.url;
+    if (!mediaUrl) {
+      console.error("No se recibió URL de media desde WhatsApp.");
+      return null;
+    }
+
+    // 2) Descargar binario
+    const fileRes = await fetch(mediaUrl, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!fileRes.ok) {
+      console.error(
+        "Error descargando media:",
+        await fileRes.text()
+      );
+      return null;
+    }
+
+    const arrayBuffer = await fileRes.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // 3) Subir a Supabase Storage
+    const ext = image.mime_type?.split("/")?.[1] || "jpg";
+    const fileName = `incidente-${Date.now()}-${mediaId}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("incidentes-fotos")
+      .upload(fileName, buffer, {
+        contentType: image.mime_type || "image/jpeg",
+        upsert: false,
+      });
+
+    if (uploadError) {
+      console.error("Error subiendo imagen a Supabase:", uploadError);
+      return null;
+    }
+
+    const { data: publicData } = supabase.storage
+      .from("incidentes-fotos")
+      .getPublicUrl(fileName);
+
+    const publicUrl = publicData?.publicUrl || null;
+    console.log("Imagen guardada en Supabase:", publicUrl);
+    return publicUrl;
+  } catch (e) {
+    console.error("Excepción guardando imagen en Supabase:", e);
+    return null;
+  }
+}
+
+// =======================
+// ARRANQUE DEL SERVIDOR
+// =======================
+
+app.listen(PORT, () => {
+  console.log(`Servidor escuchando en puerto ${PORT}`);
+});

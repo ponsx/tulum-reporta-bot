@@ -4,6 +4,8 @@ import { createClient } from "@supabase/supabase-js";
 import express from "express";
 import fetch from "node-fetch";
 import { Buffer } from "node:buffer";
+import path from "path";
+import { fileURLToPath } from "url";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -15,10 +17,21 @@ if (supabaseUrl && supabaseKey) {
   supabase = createClient(supabaseUrl, supabaseKey);
   console.log("Supabase inicializado");
 } else {
-  console.warn("Supabase NO configurado (faltan SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY)");
+  console.warn(
+    "Supabase NO configurado (faltan SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY)"
+  );
 }
 
 app.use(express.json());
+
+// =======================
+//  STATIC (para mapa, etc.)
+// =======================
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+app.use(express.static(path.join(__dirname, "public")));
 
 // =======================
 //  ESTADO EN MEMORIA
@@ -55,6 +68,59 @@ app.get("/ping", (req, res) => {
 });
 
 // =======================
+//  ENDPOINT PARA EL MAPA
+// =======================
+
+app.get("/api/incidentes", async (req, res) => {
+  if (!supabase) {
+    return res.status(500).json({ error: "Supabase no configurado" });
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("incidentes")
+      .select(
+        "id, tipo, zona, descripcion, gravedad, prioridad, estado, lat, lng, created_at, ubicacion, fotos"
+      );
+
+    if (error) {
+      console.error("Error consultando incidentes:", error);
+      return res.status(500).json({ error: "Error consultando incidentes" });
+    }
+
+    const features = (data || [])
+      .filter((row) => row.lat !== null && row.lng !== null)
+      .map((row) => ({
+        type: "Feature",
+        geometry: {
+          type: "Point",
+          coordinates: [row.lng, row.lat],
+        },
+        properties: {
+          id: row.id,
+          tipo: row.tipo,
+          zona: row.zona,
+          descripcion: row.descripcion,
+          gravedad: row.gravedad,
+          prioridad: row.prioridad,
+          estado: row.estado,
+          created_at: row.created_at,
+          ubicacion: row.ubicacion,
+          fotos: row.fotos,
+        },
+      }));
+
+    return res.json({
+      type: "FeatureCollection",
+      features,
+    });
+  } catch (e) {
+    console.error("Excepción en /api/incidentes:", e);
+    return res.status(500).json({ error: "Excepción consultando incidentes" });
+  }
+});
+
+// =======================
 //  WEBHOOK VERIFICACIÓN (GET)
 // =======================
 
@@ -75,11 +141,6 @@ app.get("/webhook", (req, res) => {
 // =======================
 //  WEBHOOK MENSAJES (POST)
 // =======================
-//
-// Importante: procesamos *todos* los mensajes del array `messages`.
-// Si el usuario manda varias fotos en un solo envío, Meta las manda
-// como varios mensajes. Aquí los iteramos y marcamos el último (isLast).
-// =======================
 
 app.post("/webhook", async (req, res) => {
   try {
@@ -91,7 +152,9 @@ app.post("/webhook", async (req, res) => {
     const messages = changes?.value?.messages || [];
 
     if (messages.length === 0) {
-      console.log("Webhook sin mensajes (posiblemente status u otro tipo de evento)");
+      console.log(
+        "Webhook sin mensajes (posiblemente status u otro tipo de evento)"
+      );
     }
 
     for (let i = 0; i < messages.length; i++) {
@@ -101,11 +164,10 @@ app.post("/webhook", async (req, res) => {
       const text = msg.text?.body?.trim() || "";
       const location = msg.location || null;
       const image = msg.image || null;
-      const isLast = i === messages.length - 1; // <- último mensaje de este lote
 
-      console.log("Mensaje entrante:", { from, type, text, location, image, isLast });
+      console.log("Mensaje entrante:", { from, type, text, location, image });
 
-      await handleIncomingMessage(from, text, location, image, isLast);
+      await handleIncomingMessage(from, text, location, image);
     }
   } catch (err) {
     console.error("Error procesando webhook:", err);
@@ -119,7 +181,7 @@ app.post("/webhook", async (req, res) => {
 //  LÓGICA DEL BOT
 // =======================
 
-async function handleIncomingMessage(phone, text, location, image, isLast = false) {
+async function handleIncomingMessage(phone, text, location, image) {
   const user = getUserState(phone);
   console.log("handleIncomingMessage estado actual:", phone, user.state);
 
@@ -189,15 +251,25 @@ async function handleIncomingMessage(phone, text, location, image, isLast = fals
     // -----------------------
     case "ESPERANDO_UBICACION": {
       let ubicacionStr = text;
+      let lat = null;
+      let lng = null;
 
-      // Si viene una ubicación nativa de WhatsApp, la convertimos a algo útil
       if (location) {
         const { latitude, longitude, name, address } = location;
-        const coords = `${latitude},${longitude}`;
-        const mapsLink = `https://www.google.com/maps?q=${latitude},${longitude}`;
+        lat = Number(latitude);
+        lng = Number(longitude);
+
+        const coords = `${lat},${lng}`;
+        const mapsLink = `https://www.google.com/maps?q=${lat},${lng}`;
         ubicacionStr = `${coords} ${name ? " - " + name : ""} ${
           address ? " - " + address : ""
         } (${mapsLink})`;
+      } else if (text) {
+        const coords = extraerCoordsDeTexto(text);
+        if (coords) {
+          lat = coords.lat;
+          lng = coords.lng;
+        }
       }
 
       if (!ubicacionStr || ubicacionStr.trim() === "") {
@@ -210,8 +282,17 @@ async function handleIncomingMessage(phone, text, location, image, isLast = fals
 
       setUserState(phone, "ESPERANDO_GRAVEDAD", {
         ubicacion: ubicacionStr.trim(),
+        lat,
+        lng,
       });
-      console.log("Ubicación registrada para", phone, "=>", ubicacionStr);
+      console.log(
+        "Ubicación registrada para",
+        phone,
+        "=>",
+        ubicacionStr,
+        lat,
+        lng
+      );
 
       await sendMessage(
         phone,
@@ -221,7 +302,7 @@ async function handleIncomingMessage(phone, text, location, image, isLast = fals
     }
 
     // -----------------------
-    //  GRAVEDAD → PASO A FOTOS
+    //  GRAVEDAD
     // -----------------------
     case "ESPERANDO_GRAVEDAD": {
       const gravedad = parseInt(text, 10);
@@ -230,94 +311,113 @@ async function handleIncomingMessage(phone, text, location, image, isLast = fals
         return;
       }
 
-      // Preparamos el estado para recibir una o varias fotos en un solo envío
       setUserState(phone, "ESPERANDO_FOTO", {
         ...user.data,
         gravedad,
-        fotos: [],
       });
 
       await sendMessage(
         phone,
-        "Si puedes, envía ahora una o varias *fotos del problema* en un solo envío."
+        "Si puedes, envía ahora *una foto del problema*.\n\nSi no tienes foto, escribe *SIN FOTO*."
       );
       return;
     }
 
     // -----------------------
-    //  FOTOS (MÚLTIPLES EN UN SOLO ENVÍO)
-    // -----------------------
+    //  FOTO (UNA SOLA OPCIONAL)
+// -----------------------
     case "ESPERANDO_FOTO": {
-      let data = user.data;
+      const data = user.data || {};
+      const texto = (text || "").toLowerCase();
 
-      // 1) Si llega una imagen, la guardamos en Supabase y la añadimos al array
+      // 1) Si llega una imagen: la guardamos y cerramos el reporte
       if (image) {
         const fotoUrl = await guardarImagenEnSupabase(image);
-        if (fotoUrl) {
-          const fotos = data.fotos || [];
-          fotos.push(fotoUrl);
+        const gravedad = data.gravedad;
+        const prioridad = calcularPrioridad(data);
 
-          data = { ...data, fotos };
-          setUserState(phone, "ESPERANDO_FOTO", data);
-        }
+        if (supabase) {
+          try {
+            const { error } = await supabase.from("incidentes").insert({
+              phone,
+              tipo: data.tipo,
+              zona: data.zona,
+              descripcion: data.descripcion,
+              ubicacion: data.ubicacion,
+              gravedad,
+              prioridad,
+              estado: "pendiente",
+              fotos: fotoUrl ? [fotoUrl] : [],
+              lat: data.lat,
+              lng: data.lng,
+              raw: data,
+            });
 
-        // Si no es el último mensaje del lote, solo acumulamos y salimos
-        if (!isLast) {
-          return;
-        }
-      } else {
-        // No es imagen
-        // Si no es el último mensaje del lote, ignoramos este mensaje
-        if (!isLast) {
-          return;
-        }
-        // Si es el último y quizás no hubo imágenes, seguimos y cerramos reporte
-      }
-
-      // 2) Aquí llegamos SOLO cuando es el último mensaje de este lote
-      data = getUserState(phone).data; // estado más reciente
-      const gravedad = data.gravedad;
-      const prioridad = calcularPrioridad(data);
-      const fotos = data.fotos || [];
-
-      console.log("Incidente registrado:", { phone, ...data, prioridad });
-
-      // Guardar en Supabase
-      if (supabase) {
-        try {
-          const { error } = await supabase.from("incidentes").insert({
-            phone,
-            tipo: data.tipo,
-            zona: data.zona,
-            descripcion: data.descripcion,
-            ubicacion: data.ubicacion,
-            gravedad: data.gravedad,
-            prioridad,
-            estado: "pendiente",
-            fotos, // array de URLs
-            raw: data,
-          });
-
-          if (error) {
-            console.error("Error guardando en Supabase:", error);
-          } else {
-            console.log("Incidente guardado en Supabase");
+            if (error) {
+              console.error("Error guardando en Supabase:", error);
+            }
+          } catch (e) {
+            console.error("Excepción guardando en Supabase:", e);
           }
-        } catch (e) {
-          console.error("Excepción guardando en Supabase:", e);
+        } else {
+          console.warn("Supabase no configurado, incidente NO guardado en BD");
         }
-      } else {
-        console.warn("Supabase no configurado, incidente NO guardado en BD");
+
+        await sendMessage(
+          phone,
+          `✅ Gracias, tu reporte fue registrado.\n\nTipo: ${data.tipo}\nZona: ${data.zona}\nGravedad: ${gravedad}\nPrioridad interna: ${prioridad}\nFotos adjuntas: 1`
+        );
+
+        setUserState(phone, "IDLE", {});
+        return;
       }
 
-      const numFotos = fotos.length;
+      // 2) Usuario decide seguir sin foto
+      if (texto === "sin foto") {
+        const gravedad = data.gravedad;
+        const prioridad = calcularPrioridad(data);
 
+        if (supabase) {
+          try {
+            const { error } = await supabase.from("incidentes").insert({
+              phone,
+              tipo: data.tipo,
+              zona: data.zona,
+              descripcion: data.descripcion,
+              ubicacion: data.ubicacion,
+              gravedad,
+              prioridad,
+              estado: "pendiente",
+              fotos: [],
+              lat: data.lat,
+              lng: data.lng,
+              raw: data,
+            });
+
+            if (error) {
+              console.error("Error guardando en Supabase:", error);
+            }
+          } catch (e) {
+            console.error("Excepción guardando en Supabase:", e);
+          }
+        } else {
+          console.warn("Supabase no configurado, incidente NO guardado en BD");
+        }
+
+        await sendMessage(
+          phone,
+          `✅ Gracias, tu reporte fue registrado *sin fotos*.\n\nTipo: ${data.tipo}\nZona: ${data.zona}\nGravedad: ${gravedad}\nPrioridad interna: ${prioridad}\nFotos adjuntas: 0`
+        );
+
+        setUserState(phone, "IDLE", {});
+        return;
+      }
+
+      // 3) Cualquier otra cosa que no sea imagen ni "SIN FOTO"
       await sendMessage(
         phone,
-        `✅ Gracias, tu reporte fue registrado.\n\nTipo: ${data.tipo}\nZona: ${data.zona}\nGravedad: ${gravedad}\nPrioridad interna: ${prioridad}\nFotos adjuntas: ${numFotos}`
+        "Ahora estoy esperando *una foto* del problema.\nEnvía una foto o escribe *SIN FOTO* para continuar sin imagen."
       );
-
-      setUserState(phone, "IDLE", {});
       return;
     }
 
@@ -424,7 +524,10 @@ async function guardarImagenEnSupabase(image) {
     );
 
     if (!metaRes.ok) {
-      console.error("Error obteniendo metadata de media:", await metaRes.text());
+      console.error(
+        "Error obteniendo metadata de media:",
+        await metaRes.text()
+      );
       return null;
     }
 
@@ -478,6 +581,20 @@ async function guardarImagenEnSupabase(image) {
     console.error("Excepción guardando imagen en Supabase:", e);
     return null;
   }
+}
+
+// =======================
+//  UTIL: EXTRAER COORDENADAS
+// =======================
+
+function extraerCoordsDeTexto(texto) {
+  const regex = /(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)/;
+  const match = texto.match(regex);
+  if (!match) return null;
+  return {
+    lat: parseFloat(match[1]),
+    lng: parseFloat(match[2]),
+  };
 }
 
 // =======================

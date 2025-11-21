@@ -185,7 +185,6 @@ app.get("/api/incidentes", async (req, res) => {
       .select(
         "id, tipo, descripcion, gravedad, estado, foto_url, zona, ubicacion, lat, lon, created_at, raw"
       )
-
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -193,7 +192,7 @@ app.get("/api/incidentes", async (req, res) => {
       return res.status(500).json({ error: "Error leyendo incidentes" });
     }
 
-       const incidentes = (data || []).map((row) => {
+    const incidentes = (data || []).map((row) => {
       // Preferimos columnas lat/lon directas
       let lat = row.lat ?? null;
       let lon = row.lon ?? null;
@@ -225,7 +224,6 @@ app.get("/api/incidentes", async (req, res) => {
         created_at: row.created_at,
       };
     });
-
 
     res.json(incidentes);
   } catch (e) {
@@ -376,11 +374,7 @@ async function handleIncomingMessage(phone, text, location, image) {
 
       if (categoria.subcategorias.length > 0) {
         const idx = parseInt(text, 10);
-        if (
-          isNaN(idx) ||
-          idx < 1 ||
-          idx > categoria.subcategorias.length
-        ) {
+        if (isNaN(idx) || idx < 1 || idx > categoria.subcategorias.length) {
           const subMenu = categoria.subcategorias
             .map((s, i) => `${i + 1}. ${s}`)
             .join("\n");
@@ -390,7 +384,7 @@ async function handleIncomingMessage(phone, text, location, image) {
           );
           return;
         }
-        subcategoria = categoria.subcategororias?.[idx - 1] || categoria.subcategorias[idx - 1];
+        subcategoria = categoria.subcategorias[idx - 1];
       } else {
         if (!text) {
           await sendMessage(
@@ -470,7 +464,7 @@ async function handleIncomingMessage(phone, text, location, image) {
       return;
     }
 
-        // 5) UBICACIÓN (ADJUNTO O TEXTO / COORDENADAS -> SIEMPRE LAT/LON)
+    // 5) UBICACIÓN (ADJUNTO O TEXTO / COORDENADAS -> SIEMPRE LAT/LON)
     case "ESPERANDO_UBICACION": {
       let direccionTexto = null;
       let ubicacionGps = null;
@@ -568,7 +562,6 @@ async function handleIncomingMessage(phone, text, location, image) {
       return;
     }
 
-
     // 6) REFERENCIAS VISUALES ESPECÍFICAS
     case "ESPERANDO_REFERENCIAS": {
       if (!text) {
@@ -625,8 +618,8 @@ async function handleIncomingMessage(phone, text, location, image) {
               zona, // dirección + referencias
               descripcion: data.descripcion, // descripción del problema
               ubicacion: data.ubicacionGps || zona, // string "lat,lon" o texto
-              lat: data.lat ?? null, // NUEVO: columna numérica
-              lon: data.lon ?? null, // NUEVO: columna numérica
+              lat: data.lat ?? null, // columna numérica
+              lon: data.lon ?? null, // columna numérica
               gravedad: data.gravedad,
               prioridad, // interno
               estado: "pendiente",
@@ -635,7 +628,6 @@ async function handleIncomingMessage(phone, text, location, image) {
             })
             .select()
             .single();
-
 
           if (error) {
             console.error("Error guardando en Supabase:", error);
@@ -693,9 +685,16 @@ function calcularPrioridad(data) {
 // =======================
 
 function isCoordInTulum(lat, lon) {
-  // latitud ~19–21 N, longitud ~ -88.5 a -86.0 W
-  if (lat < 19.0 || lat > 21.0) return false;
-  if (lon < -88.5 || lon > -86.0) return false;
+  // Bounding box del municipio de Tulum basado en tus esquinas:
+  // NO: 20.519093, -87.998068
+  // SE: 19.776048, -87.299769
+  const minLat = 19.776048;
+  const maxLat = 20.519093;
+  const minLon = -87.998068;
+  const maxLon = -87.299769;
+
+  if (lat < minLat || lat > maxLat) return false;
+  if (lon < minLon || lon > maxLon) return false;
   return true;
 }
 
@@ -840,7 +839,6 @@ async function guardarImagenEnSupabase(image) {
   }
 }
 
-
 // =======================
 // GEOCODIFICACIÓN DE DIRECCIONES
 // =======================
@@ -856,9 +854,20 @@ async function geocodeAddress(direccionTexto) {
   // Le damos contexto para forzar Tulum
   const query = `${direccionTexto}, Tulum, Quintana Roo, México`;
 
-  const url = `https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(
-    query
-  )}&key=${apiKey}&limit=1&language=es`;
+  // Bounding box del municipio de Tulum (usando tus esquinas NO/SE)
+  // Formato OpenCage: bounds=minLon,minLat,maxLon,maxLat
+  const bounds = "-87.998068,19.776048,-87.299769,20.519093";
+
+  const params = new URLSearchParams({
+    q: query,
+    key: apiKey,
+    limit: "1",
+    language: "es",
+    bounds,
+    no_annotations: "1",
+  });
+
+  const url = `https://api.opencagedata.com/geocode/v1/json?${params.toString()}`;
 
   try {
     const res = await fetch(url);
@@ -888,8 +897,6 @@ async function geocodeAddress(direccionTexto) {
     return null;
   }
 }
-
-
 
 // =======================
 // ARRANQUE DEL SERVIDOR

@@ -6,6 +6,7 @@ import fetch from "node-fetch";
 import { Buffer } from "node:buffer";
 import path from "path";
 import { fileURLToPath } from "url";
+import jwt from "jsonwebtoken";
 
 // =======================
 // CONFIG BÁSICA
@@ -17,13 +18,22 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Carpeta estática para mapa.html y otros assets
+// Carpeta estática para mapa.html, editar.html y otros assets
 app.use(express.static("public"));
 app.use(express.json());
 
 // URL que se envía al usuario para ver su reporte en el mapa
 const MAP_BASE_URL =
   process.env.PUBLIC_MAP_BASE_URL || "https://www.tulumreporta.com/mapa";
+
+// URL base pública del sitio (para armar el enlace de edición)
+const PUBLIC_BASE_URL =
+  process.env.PUBLIC_BASE_URL || "https://www.tulumreporta.com";
+
+// Secret para firmar tokens de edición
+const EDIT_TOKEN_SECRET =
+  process.env.EDIT_TOKEN_SECRET || "CAMBIA_ESTE_SECRET_EN_PROD";
+const EDIT_TOKEN_EXP_SECONDS = 60 * 60 * 24; // 24h
 
 // =======================
 // SUPABASE
@@ -157,6 +167,31 @@ function setUserState(phone, state, newData = {}) {
 }
 
 // =======================
+// TOKENS DE EDICIÓN
+// =======================
+
+function generateEditToken(incidentId, phone) {
+  return jwt.sign(
+    {
+      incidentId,
+      phone,
+    },
+    EDIT_TOKEN_SECRET,
+    { expiresIn: EDIT_TOKEN_EXP_SECONDS }
+  );
+}
+
+function verifyEditToken(token) {
+  try {
+    const payload = jwt.verify(token, EDIT_TOKEN_SECRET);
+    return payload;
+  } catch (err) {
+    console.error("Error verificando token de edición:", err.message);
+    return null;
+  }
+}
+
+// =======================
 // RUTAS BÁSICAS
 // =======================
 
@@ -169,7 +204,7 @@ app.get("/ping", (req, res) => {
 });
 
 // =======================
-// API PARA EL MAPA
+// API PARA EL MAPA (PÚBLICO)
 // =======================
 
 app.get("/api/incidentes", async (req, res) => {
@@ -229,6 +264,111 @@ app.get("/api/incidentes", async (req, res) => {
   } catch (e) {
     console.error("Excepción leyendo incidentes:", e);
     res.status(500).json({ error: "Error inesperado leyendo incidentes" });
+  }
+});
+
+// =======================
+// API EDITOR: OBTENER UN INCIDENTE (CON TOKEN)
+// =======================
+
+app.get("/api/incidentes/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const token = req.query.token;
+
+    if (!token) {
+      return res.status(401).json({ error: "Falta token" });
+    }
+
+    const payload = verifyEditToken(token);
+    if (!payload || payload.incidentId != id) {
+      return res.status(403).json({ error: "Token inválido o no coincide" });
+    }
+
+    const { data, error } = await supabase
+      .from("incidentes")
+      .select(
+        "id, tipo, descripcion, gravedad, estado, foto_url, zona, ubicacion, lat, lon, created_at"
+      )
+      .eq("id", id)
+      .single();
+
+    if (error || !data) {
+      console.error("Error buscando incidente para editar:", error);
+      return res.status(404).json({ error: "Incidente no encontrado" });
+    }
+
+    res.json(data);
+  } catch (err) {
+    console.error("Error GET /api/incidentes/:id:", err);
+    res.status(500).json({ error: "Error interno" });
+  }
+});
+
+// =======================
+// API EDITOR: ACTUALIZAR UBICACIÓN (CON TOKEN)
+// =======================
+
+app.put("/api/incidentes/:id/location", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const token = req.query.token;
+    const { lat, lon, location_text } = req.body;
+
+    if (!token) {
+      return res.status(401).json({ error: "Falta token" });
+    }
+
+    const payload = verifyEditToken(token);
+    if (!payload || payload.incidentId != id) {
+      return res.status(403).json({ error: "Token inválido o no coincide" });
+    }
+
+    // Validación básica de coordenadas
+    if (
+      typeof lat !== "number" ||
+      typeof lon !== "number" ||
+      Number.isNaN(lat) ||
+      Number.isNaN(lon)
+    ) {
+      return res.status(400).json({ error: "Coordenadas inválidas" });
+    }
+
+    if (!isCoordInTulum(lat, lon)) {
+      return res.status(400).json({
+        error:
+          "Las coordenadas nuevas no parecen estar dentro del municipio de Tulum.",
+      });
+    }
+
+    const updateObj = {
+      lat,
+      lon,
+      ubicacion: `${lat},${lon}`,
+      edited_at: new Date().toISOString(),
+    };
+
+    if (location_text) {
+      // Si el usuario proporciona nuevo texto de referencia, lo usamos como zona
+      updateObj.zona = location_text;
+    }
+
+    const { data, error } = await supabase
+      .from("incidentes")
+      .update(updateObj)
+      .eq("id", id)
+      .select("id, lat, lon, zona, ubicacion, edited_at")
+      .single();
+
+    if (error) {
+      console.error("Error actualizando ubicación:", error);
+      return res.status(500).json({ error: "Error actualizando ubicación" });
+    }
+
+    res.json({ ok: true, incidente: data });
+  } catch (err) {
+    console.error("Error PUT /api/incidentes/:id/location:", err);
+    res.status(500).json({ error: "Error interno" });
   }
 });
 
@@ -634,6 +774,22 @@ async function handleIncomingMessage(phone, text, location, image) {
           } else {
             console.log("Incidente guardado en Supabase:", inserted.id);
             incidenteId = inserted.id;
+
+            // Generar token y enlace de edición de ubicación
+            const editToken = generateEditToken(inserted.id, phone);
+            const editUrl = `${PUBLIC_BASE_URL}/editar.html?incidentId=${encodeURIComponent(
+              inserted.id
+            )}&t=${encodeURIComponent(editToken)}`;
+
+            // Mensaje extra al usuario con enlace mágico
+            const editMsg = [
+              "Si la ubicación del problema no quedó bien en el mapa, puedes ajustarla aquí:",
+              editUrl,
+              "",
+              "El enlace estará activo por 24 horas.",
+            ].join("\n");
+
+            await sendMessage(phone, editMsg);
           }
         } catch (e) {
           console.error("Excepción guardando en Supabase:", e);

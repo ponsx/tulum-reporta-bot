@@ -122,7 +122,7 @@
 
         let map;
         let marker;
-        let currentLatLng = null;
+        let currentLatLon = null; // usamos lon, NO lng
 
         function setStatus(msg, type = "") {
           statusEl.textContent = msg || "";
@@ -155,13 +155,18 @@
             }
             const data = await res.json();
 
-            const lat = data.lat ?? 20.2119; // centro aproximado Tulum
-            const lng = data.lng ?? -87.4654;
+            // OJO: el backend devuelve lat y lon, no "lng"
+            const lat =
+              typeof data.lat === "number" ? data.lat : 20.2119; // centro Tulum
+            const lon =
+              typeof data.lon === "number" ? data.lon : -87.4654;
 
-            initMap(lat, lng);
+            initMap(lat, lon);
 
-            if (data.location_text) {
-              locationInput.value = data.location_text;
+            if (data.zona) {
+              locationInput.value = data.zona;
+            } else if (data.ubicacion && typeof data.ubicacion === "string") {
+              locationInput.value = data.ubicacion;
             }
 
             setStatus(
@@ -178,24 +183,24 @@
           }
         }
 
-        function initMap(lat, lng) {
-          currentLatLng = { lat, lng };
-          map = L.map("map").setView([lat, lng], 15);
+        function initMap(lat, lon) {
+          currentLatLon = { lat, lon };
+          map = L.map("map").setView([lat, lon], 16);
 
           L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
             maxZoom: 19,
           }).addTo(map);
 
-          marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+          marker = L.marker([lat, lon], { draggable: true }).addTo(map);
 
-          marker.on("dragend", function (e) {
+          marker.on("dragend", function () {
             const pos = marker.getLatLng();
-            currentLatLng = { lat: pos.lat, lng: pos.lng };
+            currentLatLon = { lat: pos.lat, lon: pos.lng };
           });
         }
 
         saveBtn.addEventListener("click", async function () {
-          if (!currentLatLng) return;
+          if (!currentLatLon) return;
           saveBtn.disabled = true;
           setStatus("Guardando nueva ubicación...", "");
 
@@ -210,8 +215,8 @@
                   "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                  lat: currentLatLng.lat,
-                  lng: currentLatLng.lng,
+                  lat: currentLatLon.lat,
+                  lon: currentLatLon.lon, // <- aquí usamos lon, NO lng
                   location_text: locationInput.value || null,
                 }),
               }

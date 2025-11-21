@@ -183,8 +183,9 @@ app.get("/api/incidentes", async (req, res) => {
     const { data, error } = await supabase
       .from("incidentes")
       .select(
-        "id, tipo, descripcion, gravedad, estado, foto_url, zona, ubicacion, created_at, raw"
+        "id, tipo, descripcion, gravedad, estado, foto_url, zona, ubicacion, lat, lon, created_at, raw"
       )
+
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -192,19 +193,22 @@ app.get("/api/incidentes", async (req, res) => {
       return res.status(500).json({ error: "Error leyendo incidentes" });
     }
 
-    const incidentes = (data || []).map((row) => {
-      let lat = null;
-      let lon = null;
+       const incidentes = (data || []).map((row) => {
+      // Preferimos columnas lat/lon directas
+      let lat = row.lat ?? null;
+      let lon = row.lon ?? null;
 
-      // De raw.ubicacionGps o de ubicacion (si es "lat,lon")
-      const source = row.raw?.ubicacionGps || row.ubicacion;
-      if (source) {
-        const m = String(source).match(
-          /^\s*(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)\s*$/
-        );
-        if (m) {
-          lat = parseFloat(m[1]);
-          lon = parseFloat(m[3]);
+      // Fallback: intentar parsear de raw.ubicacionGps o de ubicacion (si es "lat,lon")
+      if (lat === null || lon === null) {
+        const source = row.raw?.ubicacionGps || row.ubicacion;
+        if (source) {
+          const m = String(source).match(
+            /^\s*(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)\s*$/
+          );
+          if (m) {
+            lat = parseFloat(m[1]);
+            lon = parseFloat(m[3]);
+          }
         }
       }
 
@@ -221,6 +225,7 @@ app.get("/api/incidentes", async (req, res) => {
         created_at: row.created_at,
       };
     });
+
 
     res.json(incidentes);
   } catch (e) {
@@ -465,16 +470,18 @@ async function handleIncomingMessage(phone, text, location, image) {
       return;
     }
 
-    // 5) UBICACIÓN (ADJUNTO O TEXTO / COORDENADAS)
+        // 5) UBICACIÓN (ADJUNTO O TEXTO / COORDENADAS -> SIEMPRE LAT/LON)
     case "ESPERANDO_UBICACION": {
       let direccionTexto = null;
       let ubicacionGps = null;
+      let lat = null;
+      let lon = null;
 
       // Ubicación nativa de WhatsApp
       if (location) {
         const { latitude, longitude, name, address } = location;
-        const lat = parseFloat(latitude);
-        const lon = parseFloat(longitude);
+        lat = parseFloat(latitude);
+        lon = parseFloat(longitude);
 
         if (!isCoordInTulum(lat, lon)) {
           await sendMessage(
@@ -496,8 +503,8 @@ async function handleIncomingMessage(phone, text, location, image) {
           /^\s*(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)\s*$/
         );
         if (coordMatch) {
-          const lat = parseFloat(coordMatch[1]);
-          const lon = parseFloat(coordMatch[3]);
+          lat = parseFloat(coordMatch[1]);
+          lon = parseFloat(coordMatch[3]);
 
           if (!isCoordInTulum(lat, lon)) {
             await sendMessage(
@@ -510,9 +517,32 @@ async function handleIncomingMessage(phone, text, location, image) {
           ubicacionGps = `${lat},${lon}`;
           direccionTexto = null;
         } else {
-          // Texto como dirección
+          // Texto como dirección -> geocodificar
           direccionTexto = text;
-          ubicacionGps = null;
+
+          const geo = await geocodeAddress(direccionTexto);
+          if (!geo) {
+            await sendMessage(
+              phone,
+              "No pude localizar esa dirección en el mapa.\n" +
+                "Revisa que incluya calle, número y colonia, o envía la ubicación desde WhatsApp."
+            );
+            return;
+          }
+
+          lat = geo.lat;
+          lon = geo.lon;
+
+          if (!isCoordInTulum(lat, lon)) {
+            await sendMessage(
+              phone,
+              "La dirección que enviaste parece estar fuera del municipio de Tulum.\n" +
+                "Revisa la ubicación y envía de nuevo la dirección o la ubicación desde el mapa."
+            );
+            return;
+          }
+
+          ubicacionGps = `${lat},${lon}`;
         }
       } else {
         await sendMessage(
@@ -526,6 +556,8 @@ async function handleIncomingMessage(phone, text, location, image) {
         ...user.data,
         direccionTexto,
         ubicacionGps,
+        lat,
+        lon,
       });
 
       await sendMessage(
@@ -535,6 +567,7 @@ async function handleIncomingMessage(phone, text, location, image) {
       );
       return;
     }
+
 
     // 6) REFERENCIAS VISUALES ESPECÍFICAS
     case "ESPERANDO_REFERENCIAS": {
@@ -591,15 +624,18 @@ async function handleIncomingMessage(phone, text, location, image) {
               tipo: data.categoriaNombre, // categoría principal
               zona, // dirección + referencias
               descripcion: data.descripcion, // descripción del problema
-              ubicacion: data.ubicacionGps || zona, // ubicación (gps o texto)
+              ubicacion: data.ubicacionGps || zona, // string "lat,lon" o texto
+              lat: data.lat ?? null, // NUEVO: columna numérica
+              lon: data.lon ?? null, // NUEVO: columna numérica
               gravedad: data.gravedad,
               prioridad, // interno
               estado: "pendiente",
               foto_url: data.foto_url || null,
-              raw: data, // incluye subcategoria, direccionTexto, ubicacionGps, referencias
+              raw: data, // incluye subcategoria, direccionTexto, ubicacionGps, referencias, lat, lon...
             })
             .select()
             .single();
+
 
           if (error) {
             console.error("Error guardando en Supabase:", error);
@@ -803,6 +839,57 @@ async function guardarImagenEnSupabase(image) {
     return null;
   }
 }
+
+
+// =======================
+// GEOCODIFICACIÓN DE DIRECCIONES
+// =======================
+
+async function geocodeAddress(direccionTexto) {
+  const apiKey = process.env.OPENCAGE_API_KEY; // o el servicio que elijas
+
+  if (!apiKey) {
+    console.warn("OPENCAGE_API_KEY no configurado, no se puede geocodificar.");
+    return null;
+  }
+
+  // Le damos contexto para forzar Tulum
+  const query = `${direccionTexto}, Tulum, Quintana Roo, México`;
+
+  const url = `https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(
+    query
+  )}&key=${apiKey}&limit=1&language=es`;
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.error("Error en geocodificador:", await res.text());
+      return null;
+    }
+
+    const json = await res.json();
+    const result = json.results?.[0];
+    if (!result) {
+      console.warn("Geocoder: sin resultados para:", query);
+      return null;
+    }
+
+    const lat = result.geometry?.lat;
+    const lon = result.geometry?.lng;
+
+    if (typeof lat !== "number" || typeof lon !== "number") {
+      console.warn("Geocoder: resultado sin lat/lon válidos:", result);
+      return null;
+    }
+
+    return { lat, lon };
+  } catch (e) {
+    console.error("Excepción en geocodeAddress:", e);
+    return null;
+  }
+}
+
+
 
 // =======================
 // ARRANQUE DEL SERVIDOR

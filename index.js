@@ -26,7 +26,7 @@ app.use(express.json());
 const MAP_BASE_URL =
   process.env.PUBLIC_MAP_BASE_URL || "https://www.tulumreporta.com/mapa";
 
-// URL base pública del sitio (para armar el enlace de edición)
+// URL base pública del sitio (para armar enlaces)
 const PUBLIC_BASE_URL =
   process.env.PUBLIC_BASE_URL || "https://www.tulumreporta.com";
 
@@ -167,7 +167,7 @@ function setUserState(phone, state, newData = {}) {
 }
 
 // =======================
-// TOKENS DE EDICIÓN
+// TOKENS DE EDICIÓN Y SHORT LINKS
 // =======================
 
 function generateEditToken(incidentId, phone) {
@@ -191,6 +191,13 @@ function verifyEditToken(token) {
   }
 }
 
+function generateShortId() {
+  // 8 chars base36 pseudoaleatorio, suficiente para MVP
+  return [...Array(8)]
+    .map(() => Math.random().toString(36)[2])
+    .join("");
+}
+
 // =======================
 // RUTAS BÁSICAS
 // =======================
@@ -201,6 +208,44 @@ app.get("/", (req, res) => {
 
 app.get("/ping", (req, res) => {
   res.status(200).send("pong");
+});
+
+// =======================
+// RUTA CORTA DE EDICIÓN: /e/:shortId
+// =======================
+
+app.get("/e/:shortId", async (req, res) => {
+  const { shortId } = req.params;
+
+  if (!supabase) {
+    return res.status(500).send("Supabase no configurado");
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("edit_tokens")
+      .select("incident_id, token, expires_at")
+      .eq("short_id", shortId)
+      .single();
+
+    if (error || !data) {
+      console.error("edit_tokens: shortId no encontrado:", shortId, error);
+      return res.status(404).send("Enlace inválido o expirado");
+    }
+
+    if (data.expires_at && new Date(data.expires_at) < new Date()) {
+      return res.status(410).send("El enlace ha expirado");
+    }
+
+    const redirectUrl = `/editar.html?incidentId=${encodeURIComponent(
+      data.incident_id
+    )}&t=${encodeURIComponent(data.token)}`;
+
+    return res.redirect(redirectUrl);
+  } catch (err) {
+    console.error("Error en /e/:shortId:", err);
+    return res.status(500).send("Error interno");
+  }
 });
 
 // =======================
@@ -345,11 +390,9 @@ app.put("/api/incidentes/:id/location", async (req, res) => {
       lat,
       lon,
       ubicacion: `${lat},${lon}`,
-      edited_at: new Date().toISOString(),
     };
 
     if (location_text) {
-      // Si el usuario proporciona nuevo texto de referencia, lo usamos como zona
       updateObj.zona = location_text;
     }
 
@@ -357,7 +400,7 @@ app.put("/api/incidentes/:id/location", async (req, res) => {
       .from("incidentes")
       .update(updateObj)
       .eq("id", id)
-      .select("id, lat, lon, zona, ubicacion, edited_at")
+      .select("id, lat, lon, zona, ubicacion")
       .single();
 
     if (error) {
@@ -775,21 +818,68 @@ async function handleIncomingMessage(phone, text, location, image) {
             console.log("Incidente guardado en Supabase:", inserted.id);
             incidenteId = inserted.id;
 
-            // Generar token y enlace de edición de ubicación
+            // Generar token de edición
             const editToken = generateEditToken(inserted.id, phone);
-            const editUrl = `${PUBLIC_BASE_URL}/editar.html?incidentId=${encodeURIComponent(
-              inserted.id
-            )}&t=${encodeURIComponent(editToken)}`;
+            const shortId = generateShortId();
 
-            // Mensaje extra al usuario con enlace mágico
-            const editMsg = [
-              "Si la ubicación del problema no quedó bien en el mapa, puedes ajustarla aquí:",
-              editUrl,
-              "",
-              "El enlace estará activo por 24 horas.",
-            ].join("\n");
+            // Guardar shortId en tabla edit_tokens
+            try {
+              const expiresAt = new Date(
+                Date.now() + EDIT_TOKEN_EXP_SECONDS * 1000
+              ).toISOString();
 
-            await sendMessage(phone, editMsg);
+              const { error: tokenError } = await supabase
+                .from("edit_tokens")
+                .insert({
+                  short_id: shortId,
+                  incident_id: inserted.id,
+                  token: editToken,
+                  expires_at: expiresAt,
+                });
+
+              if (tokenError) {
+                console.error(
+                  "Error guardando edit_token, usando URL larga:",
+                  tokenError
+                );
+                // Fallback: URL larga con token visible
+                const longEditUrl = `${PUBLIC_BASE_URL}/editar.html?incidentId=${encodeURIComponent(
+                  inserted.id
+                )}&t=${encodeURIComponent(editToken)}`;
+                const editMsg = [
+                  "Si la ubicación del problema no quedó bien en el mapa, puedes ajustarla aquí:",
+                  longEditUrl,
+                  "",
+                  "El enlace estará activo por 24 horas.",
+                ].join("\n");
+                await sendMessage(phone, editMsg);
+              } else {
+                // URL corta bonita
+                const shortUrl = `${PUBLIC_BASE_URL}/e/${shortId}`;
+                const editMsg = [
+                  "Si la ubicación del problema no quedó bien en el mapa, puedes ajustarla aquí:",
+                  shortUrl,
+                  "",
+                  "El enlace estará activo por 24 horas.",
+                ].join("\n");
+                await sendMessage(phone, editMsg);
+              }
+            } catch (e) {
+              console.error(
+                "Excepción guardando edit_token, usando URL larga:",
+                e
+              );
+              const longEditUrl = `${PUBLIC_BASE_URL}/editar.html?incidentId=${encodeURIComponent(
+                inserted.id
+              )}&t=${encodeURIComponent(editToken)}`;
+              const editMsg = [
+                "Si la ubicación del problema no quedó bien en el mapa, puedes ajustarla aquí:",
+                longEditUrl,
+                "",
+                "El enlace estará activo por 24 horas.",
+              ].join("\n");
+              await sendMessage(phone, editMsg);
+            }
           }
         } catch (e) {
           console.error("Excepción guardando en Supabase:", e);

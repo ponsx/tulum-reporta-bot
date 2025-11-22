@@ -901,11 +901,11 @@ async function handleIncomingMessage(phone, text, location, image) {
       // Mensaje de confirmación al usuario (fusionado con link de edición)
       let mensaje =
         `✅ Gracias por tu reporte de *${data.categoriaNombre}*.\n\n` +
-        `Ya está en revisión y se enviará al responsable que debe resolverlo.\n` +
-        `*¡Lo que reportas, importa!*\n\n`;
+        `Ya está en revisión y se enviará al responsable que debe resolverlo.\n\n` +
+        `*Lo que reportas, importa.*\n\n`;
       
       if (editUrl) {
-        mensaje += `Si la ubicación no quedó exacta, puedes mover el pin aquí (24 h):\n${editUrl}`;
+        mensaje += `Puedes ajustar la ubicación moviendo el pin aquí (24 h):\n${editUrl}`;
       }
 
 

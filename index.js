@@ -490,17 +490,18 @@ async function handleIncomingMessage(phone, text, location, image) {
     setUserState(phone, "ESPERANDO_CATEGORIA");
     await sendMessage(
       phone,
-      "Hola 👋, este es el bot de *Tulum Reporta*.\n¿Qué tipo de problema quieres reportar?\n" +
-        "1️⃣ Baches y superficie de la calle\n" +
-        "2️⃣ Alumbrado público\n" +
-        "3️⃣ Basura y limpieza\n" +
-        "4️⃣ Drenaje y agua\n" +
-        "5️⃣ Señalización y semáforos\n" +
-        "6️⃣ Banquetas y espacio peatonal\n" +
-        "7️⃣ Áreas verdes y árboles\n" +
-        "8️⃣ Seguridad y vandalismo\n" +
-        "9️⃣ Ruido y molestias\n" +
-        "0️⃣ Otro tipo de problema"
+      "Hola 👋, este es el bot de *Tulum Reporta*.\n" +
+        "¿Qué tipo de problema quieres reportar?\n" +
+        "1. Baches y superficie de la calle\n" +
+        "2. Alumbrado público\n" +
+        "3. Basura y limpieza\n" +
+        "4. Drenaje y agua\n" +
+        "5. Señalización y semáforos\n" +
+        "6. Banquetas y espacio peatonal\n" +
+        "7. Áreas verdes y árboles\n" +
+        "8. Seguridad y vandalismo\n" +
+        "9. Ruido y molestias\n" +
+        "0. Otro tipo de problema"
     );
     return;
   }
@@ -529,12 +530,12 @@ async function handleIncomingMessage(phone, text, location, image) {
 
         await sendMessage(
           phone,
-          `Has elegido: *${categoria.nombre}*\nAhora elige una opción:\n${subMenu}`
+          `*${categoria.nombre}*\nAhora elige una opción:\n${subMenu}`
         );
       } else {
         await sendMessage(
           phone,
-          `Has elegido: *${categoria.nombre}*.\nEscribe brevemente qué tipo de problema es (subcategoría).`
+          `*${categoria.nombre}*.\nEscribe brevemente qué tipo de problema es (subcategoría).`
         );
       }
       return;
@@ -617,7 +618,7 @@ async function handleIncomingMessage(phone, text, location, image) {
 
       await sendMessage(
         phone,
-        "Describe brevemente el problema (qué pasa, desde cuándo, si afecta el paso, etc.)."
+        "Describe brevemente el problema (qué pasa, desde cuándo, en qué afecta, etc.)."
       );
       return;
     }
@@ -640,9 +641,8 @@ async function handleIncomingMessage(phone, text, location, image) {
       await sendMessage(
         phone,
         "Ahora indica la *ubicación del problema*:\n\n" +
-          "- Puedes adjuntar la ubicación desde WhatsApp (ubicación en el mapa), o\n" +
-          "- Escribir la dirección textual (número, calle, colonia), o\n" +
-          "- Enviar las coordenadas en formato: latitud,longitud"
+          "- Adjunta la ubicación desde WhatsApp (símbolo +), o\n" +
+          "- Escribe la dirección (calle y número, colonia, población)"
       );
       return;
     }
@@ -702,7 +702,7 @@ async function handleIncomingMessage(phone, text, location, image) {
             await sendMessage(
               phone,
               "No pude localizar esa dirección en el mapa.\n" +
-                "Revisa que incluya calle, número y colonia, o envía la ubicación desde WhatsApp."
+                "Revisa que incluya calle, número, colonia y población, o envía la ubicación desde WhatsApp."
             );
             return;
           }
@@ -724,7 +724,7 @@ async function handleIncomingMessage(phone, text, location, image) {
       } else {
         await sendMessage(
           phone,
-          "No pude leer la ubicación. Adjunta la ubicación en el mapa, escribe la dirección (número, calle, colonia) o envía las coordenadas en formato latitud,longitud."
+          "No pude leer la ubicación. Adjunta la ubicación en el mapa, escribe la dirección (calle, número, colonia y población) o adjunta la ubicación desde WhatsApp."
         );
         return;
       }
@@ -739,8 +739,7 @@ async function handleIncomingMessage(phone, text, location, image) {
 
       await sendMessage(
         phone,
-        "Para ayudar a encontrar el lugar exacto, escribe *referencias visuales específicas*, por ejemplo:\n" +
-          "“Frente a la tienda X”, “a un lado del Oxxo”, “lado derecho de la calle”, “esquina con la calle Y”, etc."
+        "Danos alguna *referencia visual específica* que nos ayude a ubicar el problema."
       );
       return;
     }
@@ -750,7 +749,7 @@ async function handleIncomingMessage(phone, text, location, image) {
       if (!text) {
         await sendMessage(
           phone,
-          "Escribe alguna referencia visual para encontrar el problema (frente a qué, esquina, lado de la calle, etc.)."
+          "Escribe alguna referencia visual para encontrar el problema (frente a qué, con qué esquina, lado de la calle, etc.)."
         );
         return;
       }
@@ -762,7 +761,7 @@ async function handleIncomingMessage(phone, text, location, image) {
 
       await sendMessage(
         phone,
-        "Del 1 al 5, ¿qué tan peligroso o urgente consideras este problema?\n1 = leve\n5 = peligro serio."
+        "Del 1 al 5, ¿qué tan urgente consideras este problema?\n1 = leve\n5 = peligro serio."
       );
       return;
     }
@@ -773,7 +772,7 @@ async function handleIncomingMessage(phone, text, location, image) {
       if (isNaN(gravedad) || gravedad < 1 || gravedad > 5) {
         await sendMessage(
           phone,
-          "Responde con un número del 1 al 5 para indicar el nivel de peligro."
+          "Responde con un número del 1 al 5 para indicar el nivel de urgencia."
         );
         return;
       }
@@ -789,6 +788,7 @@ async function handleIncomingMessage(phone, text, location, image) {
         null;
 
       let incidenteId = null;
+      let editUrl = null;
 
       // Guardar en Supabase
       if (supabase) {
@@ -846,23 +846,11 @@ async function handleIncomingMessage(phone, text, location, image) {
                 const longEditUrl = `${PUBLIC_BASE_URL}/editar.html?incidentId=${encodeURIComponent(
                   inserted.id
                 )}&t=${encodeURIComponent(editToken)}`;
-                const editMsg = [
-                  "Si la ubicación del problema no quedó bien en el mapa, puedes ajustarla aquí:",
-                  longEditUrl,
-                  "",
-                  "El enlace estará activo por 24 horas.",
-                ].join("\n");
-                await sendMessage(phone, editMsg);
+                editUrl = longEditUrl;
               } else {
                 // URL corta bonita
                 const shortUrl = `${PUBLIC_BASE_URL}/e/${shortId}`;
-                const editMsg = [
-                  "Si la ubicación del problema no quedó bien en el mapa, puedes ajustarla aquí:",
-                  shortUrl,
-                  "",
-                  "El enlace estará activo por 24 horas.",
-                ].join("\n");
-                await sendMessage(phone, editMsg);
+                editUrl = shortUrl;
               }
             } catch (e) {
               console.error(
@@ -872,13 +860,7 @@ async function handleIncomingMessage(phone, text, location, image) {
               const longEditUrl = `${PUBLIC_BASE_URL}/editar.html?incidentId=${encodeURIComponent(
                 inserted.id
               )}&t=${encodeURIComponent(editToken)}`;
-              const editMsg = [
-                "Si la ubicación del problema no quedó bien en el mapa, puedes ajustarla aquí:",
-                longEditUrl,
-                "",
-                "El enlace estará activo por 24 horas.",
-              ].join("\n");
-              await sendMessage(phone, editMsg);
+              editUrl = longEditUrl;
             }
           }
         } catch (e) {
@@ -888,18 +870,15 @@ async function handleIncomingMessage(phone, text, location, image) {
         console.warn("Supabase no configurado, incidente NO guardado en BD");
       }
 
-      // Mensaje de confirmación al usuario
-      let mensaje = "✅ Gracias, tu reporte fue registrado.\n\n";
-      mensaje += `• Categoría: *${data.categoriaNombre}${
-        data.subcategoria ? " - " + data.subcategoria : ""
-      }*\n`;
-      mensaje += `• Peligro percibido (1–5): *${gravedad}*\n`;
-      mensaje += `• Foto adjunta: ${data.foto_url ? "✔️" : "✖️"}`;
+      // Mensaje de confirmación al usuario (fusionado con link de edición)
+      let mensaje =
+        `✅ Tu reporte de *${data.categoriaNombre}${
+          data.subcategoria ? " - " + data.subcategoria : ""
+        }* fue registrado. Gracias por ayudar a mejorar Tulum.\n\n` +
+        "El reporte está en revisión y aparecerá públicamente en el mapa en breve. También será enviado a las áreas responsables para ejercer presión y que atiendan el problema.\n\n";
 
-      // Link al mapa si tenemos ID
-      if (incidenteId) {
-        const link = `${MAP_BASE_URL}?id=${incidenteId}`;
-        mensaje += `\n\nPuedes ver tu reporte en el mapa aquí:\n${link}`;
+      if (editUrl) {
+        mensaje += `Si la ubicación no quedó bien, puedes ajustarla aquí durante las próximas 24 h:\n${editUrl}`;
       }
 
       await sendMessage(phone, mensaje);

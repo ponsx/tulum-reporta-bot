@@ -58,85 +58,88 @@ if (supabaseUrl && supabaseKey) {
 
 const CATEGORIES = {
   "1": {
-    nombre: "Baches y superficie de la calle",
+    nombre: "Calles y Vehículos 🚗",
     subcategorias: [
-      "Bache en la calle",
-      "Pavimento roto",
-      "Hundimiento",
+      "Bache en calle",
+      "Pavimento dañado",
       "Tope en mal estado",
+      "Registro/tapa suelta",
+      "Señal caída o falta de señal",
+      "Semáforo fallando",
     ],
+    subcategoriaOtro: "Otro de calles",
   },
   "2": {
-    nombre: "Alumbrado público",
+    nombre: "Electricidad e Iluminación 💡",
     subcategorias: [
       "Luminaria apagada",
-      "Luminaria intermitente",
       "Poste dañado",
-      "Zona sin alumbrado",
+      "Cables colgando",
+      "Transformadores",
+      "Zona muy oscura",
+      "Riesgo eléctrico",
     ],
+    subcategoriaOtro: "Otro eléctrico",
   },
   "3": {
-    nombre: "Basura y limpieza",
+    nombre: "Limpieza y Basura 🗑️",
     subcategorias: [
       "Basura acumulada",
-      "Escombro",
-      "Contenedor lleno o roto",
+      "Escombro suelto",
       "Tiradero ilegal",
+      "Contenedor lleno o roto",
+      "Animal muerto",
+      "Residuo voluminoso",
     ],
+    subcategoriaOtro: "Otro de limpieza",
   },
   "4": {
-    nombre: "Drenaje y agua",
+    nombre: "Agua y Drenaje 💧",
     subcategorias: [
-      "Alcantarilla tapada",
       "Fuga de agua",
-      "Encharcamiento / inundación",
+      "Alcantarilla tapada",
+      "Encharcamiento/inundación",
       "Olor fuerte a drenaje",
+      "Drenaje desbordado",
+      "Pozo o registro abierto",
     ],
+    subcategoriaOtro: "Otro de agua",
   },
   "5": {
-    nombre: "Señalización y semáforos",
+    nombre: "Espacio Público 🌳",
     subcategorias: [
-      "Señal caída o dañada",
-      "Falta de señal",
-      "Semáforo apagado",
-      "Semáforo desfasado",
+      "Banqueta dañada",
+      "Árbol caído",
+      "Vegetación bloqueando el paso",
+      "Mobiliario urbano roto",
+      "Parque o área verde dañada",
+      "Poste/estructura en mal estado",
     ],
+    subcategoriaOtro: "Otro de espacio público",
   },
   "6": {
-    nombre: "Banquetas y espacio peatonal",
+    nombre: "Fauna Salvaje 🐍",
     subcategorias: [
-      "Banqueta rota",
-      "Obstrucción en banqueta",
-      "Falta de rampa",
-      "Tapa o registro suelto",
+      "Serpiente o reptil",
+      "Panal de abejas/avispas",
+      "Animal salvaje peligroso",
+      "Animal herido",
+      "Fauna en zona habitada",
+      "Animal doméstico suelto",
     ],
+    subcategoriaOtro: "Otro de fauna",
   },
   "7": {
-    nombre: "Áreas verdes y árboles",
+    nombre: "Construcción y Obras 🚧",
     subcategorias: [
-      "Árbol caído",
-      "Rama peligrosa",
-      "Vegetación bloqueando el paso",
-      "Falta de poda",
+      "Zanja abierta",
+      "Obra sin señalización",
+      "Material de obra en calle",
+      "Obra abandonada",
+      "Valla/protección dañada",
+      "Excavación peligrosa",
     ],
-  },
-  "8": {
-    nombre: "Seguridad y vandalismo",
-    subcategorias: [
-      "Grafiti / vandalismo",
-      "Punto con robos frecuentes",
-      "Daño a mobiliario urbano",
-      "Zona muy oscura e insegura",
-    ],
-  },
-  "9": {
-    nombre: "Ruido y molestias",
-    subcategorias: [
-      "Música muy alta",
-      "Fiestas recurrentes",
-      "Maquinaria ruidosa",
-      "Otros ruidos constantes",
-    ],
+    subcategoriaOtro: "Otro de obra",
   },
   "0": {
     nombre: "Otro tipo de problema",
@@ -488,20 +491,27 @@ async function handleIncomingMessage(phone, text, location, image) {
   // Inicio de conversación
   if (user.state === "IDLE") {
     setUserState(phone, "ESPERANDO_CATEGORIA");
+
+    // Construimos el menú de categorías a partir de CATEGORIES
+    const categoriasOrdenadas = Object.entries(CATEGORIES)
+      .filter(([k]) => k !== "0")
+      .sort((a, b) => parseInt(a[0]) - parseInt(b[0]));
+
+    const lineas = categoriasOrdenadas.map(
+      ([key, cat]) => `${key}. ${cat.nombre}`
+    );
+
+    if (CATEGORIES["0"]) {
+      lineas.push(`0. ${CATEGORIES["0"].nombre}`);
+    }
+
+    const menuTexto = lineas.join("\n");
+
     await sendMessage(
       phone,
       "Hola 👋, este es el bot de *Tulum Reporta*.\n" +
         "¿Qué tipo de problema quieres reportar?\n" +
-        "1. Baches y superficie de la calle\n" +
-        "2. Alumbrado público\n" +
-        "3. Basura y limpieza\n" +
-        "4. Drenaje y agua\n" +
-        "5. Señalización y semáforos\n" +
-        "6. Banquetas y espacio peatonal\n" +
-        "7. Áreas verdes y árboles\n" +
-        "8. Seguridad y vandalismo\n" +
-        "9. Ruido y molestias\n" +
-        "0. Otro tipo de problema"
+        menuTexto
     );
     return;
   }
@@ -513,7 +523,7 @@ async function handleIncomingMessage(phone, text, location, image) {
       if (!categoria) {
         await sendMessage(
           phone,
-          "Responde con un número de la lista (0 a 9) para elegir la categoría."
+          "Responde con un número de la lista (0 a 7) para elegir la categoría."
         );
         return;
       }
@@ -524,9 +534,14 @@ async function handleIncomingMessage(phone, text, location, image) {
       });
 
       if (categoria.subcategorias.length > 0) {
-        const subMenu = categoria.subcategorias
-          .map((s, idx) => `${idx + 1}. ${s}`)
-          .join("\n");
+        const subMenuLines = categoria.subcategorias.map(
+          (s, idx) => `${idx + 1}. ${s}`
+        );
+        if (categoria.subcategoriaOtro) {
+          subMenuLines.push(`0. ${categoria.subcategoriaOtro}`);
+        }
+
+        const subMenu = subMenuLines.join("\n");
 
         await sendMessage(
           phone,
@@ -557,18 +572,32 @@ async function handleIncomingMessage(phone, text, location, image) {
       }
 
       if (categoria.subcategorias.length > 0) {
-        const idx = parseInt(text, 10);
-        if (isNaN(idx) || idx < 1 || idx > categoria.subcategorias.length) {
-          const subMenu = categoria.subcategorias
-            .map((s, i) => `${i + 1}. ${s}`)
-            .join("\n");
-          await sendMessage(
-            phone,
-            `Responde con un número de la lista:\n${subMenu}`
-          );
-          return;
+        // Opción "0" = otro
+        if (text === "0" && categoria.subcategoriaOtro) {
+          subcategoria = categoria.subcategoriaOtro;
+        } else {
+          const idx = parseInt(text, 10);
+          if (
+            isNaN(idx) ||
+            idx < 1 ||
+            idx > categoria.subcategorias.length
+          ) {
+            const subMenuLines = categoria.subcategorias.map(
+              (s, i) => `${i + 1}. ${s}`
+            );
+            if (categoria.subcategoriaOtro) {
+              subMenuLines.push(`0. ${categoria.subcategoriaOtro}`);
+            }
+            const subMenu = subMenuLines.join("\n");
+
+            await sendMessage(
+              phone,
+              `Responde con un número de la lista:\n${subMenu}`
+            );
+            return;
+          }
+          subcategoria = categoria.subcategorias[idx - 1];
         }
-        subcategoria = categoria.subcategorias[idx - 1];
       } else {
         if (!text) {
           await sendMessage(

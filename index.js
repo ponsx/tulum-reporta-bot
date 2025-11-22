@@ -60,26 +60,26 @@ const CATEGORIES = {
   "1": {
     nombre: "Calles y Vehículos 🚗",
     subcategorias: [
-      "Bache en calle",
+      "Hoyo en la calle",
       "Pavimento dañado",
+      "Obstáculo en la vía",
       "Tope en mal estado",
       "Registro/tapa suelta",
-      "Señal caída o falta de señal",
-      "Semáforo fallando",
+      "Señal rota o ausente"
     ],
-    subcategoriaOtro: "Otro de calles",
+    subcategoriaOtro: "Otro problema"
   },
   "2": {
-    nombre: "Electricidad y Luces 💡",
+    nombre: "Luces y Electricidad 💡",
     subcategorias: [
       "Luminaria apagada",
       "Poste dañado",
       "Cables colgando",
       "Transformadores",
       "Zona muy oscura",
-      "Riesgo eléctrico",
+      "Riesgo eléctrico"
     ],
-    subcategoriaOtro: "Otro eléctrico",
+    subcategoriaOtro: "Otro problema"
   },
   "3": {
     nombre: "Limpieza y Basura 🗑️",
@@ -87,11 +87,11 @@ const CATEGORIES = {
       "Basura acumulada",
       "Escombro suelto",
       "Tiradero ilegal",
-      "Contenedor lleno o roto",
+      "Contenedor roto",
       "Animal muerto",
-      "Residuo voluminoso",
+      "Residuo voluminoso"
     ],
-    subcategoriaOtro: "Otro de limpieza",
+    subcategoriaOtro: "Otro problema"
   },
   "4": {
     nombre: "Agua y Drenaje 💧",
@@ -101,33 +101,31 @@ const CATEGORIES = {
       "Encharcamiento/inundación",
       "Olor fuerte a drenaje",
       "Drenaje desbordado",
-      "Pozo o registro abierto",
+      "Pozo o registro abierto"
     ],
-    subcategoriaOtro: "Otro de agua",
+    subcategoriaOtro: "Otro problema"
   },
   "5": {
     nombre: "Espacio Público 🌳",
     subcategorias: [
       "Banqueta dañada",
-      "Árbol caído",
-      "Vegetación bloqueando el paso",
+      "Árbol o rama caída",
+      "Vegetación obstruyendo el paso",
       "Mobiliario urbano roto",
       "Parque o área verde dañada",
-      "Poste/estructura en mal estado",
+      "Estructura en mal estado"
     ],
-    subcategoriaOtro: "Otro de espacio público",
+    subcategoriaOtro: "Otro problema"
   },
   "6": {
     nombre: "Fauna Salvaje 🐍",
     subcategorias: [
-      "Serpiente o reptil",
-      "Panal de abejas/avispas",
       "Animal salvaje peligroso",
-      "Animal herido",
-      "Fauna en zona habitada",
-      "Animal doméstico suelto",
+      "Panal de abejas/avispas",
+      "Animal herido/agresivo",
+      "Animal doméstico suelto"
     ],
-    subcategoriaOtro: "Otro de fauna",
+    subcategoriaOtro: "Otro problema"
   },
   "7": {
     nombre: "Construcción y Obras 🚧",
@@ -137,15 +135,16 @@ const CATEGORIES = {
       "Material de obra en calle",
       "Obra abandonada",
       "Valla/protección dañada",
-      "Excavación peligrosa",
+      "Excavación peligrosa"
     ],
-    subcategoriaOtro: "Otro de obra",
+    subcategoriaOtro: "Otro problema"
   },
   "0": {
     nombre: "Otro tipo de problema",
-    subcategorias: [], // texto libre
-  },
+    subcategorias: []
+  }
 };
+
 
 // =======================
 // ESTADO EN MEMORIA
@@ -901,9 +900,7 @@ async function handleIncomingMessage(phone, text, location, image) {
 
       // Mensaje de confirmación al usuario (fusionado con link de edición)
       let mensaje =
-        `✅ Tu reporte de *${data.categoriaNombre}${
-          data.subcategoria ? " - " + data.subcategoria : ""
-        }* fue registrado. Gracias por ayudar a mejorar Tulum.\n\n` +
+        `✅ Tu reporte de *${data.categoriaNombre}$* fue registrado. Gracias por ayudar a contruir un Tulum cívico.\n\n` +
         "El reporte está en revisión y aparecerá públicamente en el mapa en breve. También será enviado a las áreas responsables para ejercer presión y que atiendan el problema.\n\n";
 
       if (editUrl) {

@@ -1167,15 +1167,18 @@ async function guardarImagenEnSupabase(image) {
 // =======================
 
 async function geocodeAddress(direccionTexto) {
-  const apiKey = process.env.OPENCAGE_API_KEY;
+  const apiKey = process.env.OPENCAGE_API_KEY; // o el servicio que elijas
 
   if (!apiKey) {
     console.warn("OPENCAGE_API_KEY no configurado, no se puede geocodificar.");
     return null;
   }
 
-  const query = `${direccionTexto,}, Tulum, Quintana Roo, México`;
+  // Le damos contexto para forzar Tulum
+  const query = `${direccionTexto}, Tulum, Quintana Roo, México`;
 
+  // Bounding box del municipio de Tulum (usando tus esquinas NO/SE)
+  // Formato OpenCage: bounds=minLon,minLat,maxLon,maxLat
   const bounds = "-87.998068,19.776048,-87.299769,20.519093";
 
   const params = new URLSearchParams({
@@ -1217,6 +1220,7 @@ async function geocodeAddress(direccionTexto) {
     return null;
   }
 }
+
 
 // =======================
 // RUTAS ADMIN: APROBAR / DENEGAR

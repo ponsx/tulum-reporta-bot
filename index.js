@@ -900,12 +900,15 @@ async function handleIncomingMessage(phone, text, location, image) {
 
       // Mensaje de confirmación al usuario (fusionado con link de edición)
       let mensaje =
-        `✅ Tu reporte de *${data.categoriaNombre}$* fue registrado. Gracias por ayudar a contruir un Tulum cívico.\n\n` +
-        "El reporte está en revisión y aparecerá públicamente en el mapa en breve. También será enviado a las áreas responsables para ejercer presión y que atiendan el problema.\n\n";
-
+        `✅ Gracias por tu reporte de *${data.categoriaNombre}*. Cada aviso ayuda a mejorar Tulum.\n\n` +
+        `Ya está en revisión y se enviará al responsable que debe resolverlo.\n` +
+        `Puedes verlo en el mapa: https://tulumreporta.com/mapa\n\n` +
+        `Lo que reportas, importa.\n\n`;
+      
       if (editUrl) {
-        mensaje += `Si la ubicación no quedó bien, puedes ajustarla aquí durante las próximas 24 h:\n${editUrl}`;
+        mensaje += `Si la ubicación no quedó exacta, puedes mover el pin aquí (24 h):\n${editUrl}`;
       }
+
 
       await sendMessage(phone, mensaje);
 

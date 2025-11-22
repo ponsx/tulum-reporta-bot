@@ -70,7 +70,7 @@ const CATEGORIES = {
     subcategoriaOtro: "Otro de calles",
   },
   "2": {
-    nombre: "Electricidad e Iluminación 💡",
+    nombre: "Electricidad y Luces 💡",
     subcategorias: [
       "Luminaria apagada",
       "Poste dañado",

@@ -108,10 +108,9 @@
                     inc.foto_url
                       ? `
                         <div class="popup-foto">
+                        <a href="${inc.foto_url}" target="_blank" rel="noopener noreferrer">
                           <img src="${inc.foto_url}" alt="Foto del reporte" />
-                          <a href="${inc.foto_url}" target="_blank" rel="noopener noreferrer">
-                            Ver foto en grande
-                          </a>
+                        </a>
                         </div>
                       `
                       : ""

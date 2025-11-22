@@ -44,6 +44,24 @@
       .popup-detalle small {
         color: #666;
       }
+
+      .popup-foto {
+        margin-top: 6px;
+        text-align: center;
+      }
+
+      .popup-foto img {
+        max-width: 220px;
+        max-height: 160px;
+        border-radius: 8px;
+        display: block;
+        margin: 0 auto 4px;
+        object-fit: cover;
+      }
+
+      .popup-foto a {
+        font-size: 12px;
+      }
     </style>
   </head>
   <body>
@@ -103,7 +121,14 @@
                   }
                   ${
                     inc.foto_url
-                      ? `<div class="popup-detalle"><a href="${inc.foto_url}" target="_blank" rel="noopener noreferrer">Ver foto</a></div>`
+                      ? `
+                        <div class="popup-foto">
+                          <img src="${inc.foto_url}" alt="Foto del reporte" />
+                          <a href="${inc.foto_url}" target="_blank" rel="noopener noreferrer">
+                            Ver foto en grande
+                          </a>
+                        </div>
+                      `
                       : ""
                   }
                 </div>
@@ -120,9 +145,9 @@
             map.fitBounds(bounds, { padding: [40, 40] });
           }
 
-          // Si viene ?id= en la URL, centrar y abrir ese incidente
+          // Si viene ?id= o ?i= en la URL, centrar y abrir ese incidente
           const params = new URLSearchParams(window.location.search);
-          const targetId = params.get("id");
+          const targetId = params.get("id") || params.get("i");
           if (targetId && markersById[targetId]) {
             const m = markersById[targetId];
             map.setView(m.getLatLng(), 17);

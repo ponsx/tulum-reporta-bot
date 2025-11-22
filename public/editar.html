@@ -56,6 +56,10 @@
         border-radius: 0.25rem;
         border: 1px solid #d1d5db;
         font-size: 0.9rem;
+        background-color: #f3f4f6;
+      }
+      input[type="text"][readonly] {
+        color: #4b5563;
       }
       button {
         margin-top: 0.5rem;
@@ -91,12 +95,13 @@
       <div class="panel">
         <div class="row">
           <label for="locationText">
-            Referencia del lugar (calle, negocio cercano, etc.)
+            Referencia del lugar (solo lectura)
           </label>
           <input
             type="text"
             id="locationText"
             placeholder="Ej. Frente a la tienda X, esquina con Y..."
+            readonly
           />
           <button id="saveBtn" disabled>Guardar nueva ubicación</button>
           <div id="status" class="status"></div>
@@ -167,6 +172,8 @@
               locationInput.value = data.zona;
             } else if (data.ubicacion && typeof data.ubicacion === "string") {
               locationInput.value = data.ubicacion;
+            } else {
+              locationInput.value = "";
             }
 
             setStatus(
@@ -185,17 +192,30 @@
 
         function initMap(lat, lon) {
           currentLatLon = { lat, lon };
-          map = L.map("map").setView([lat, lon], 16);
+          map = L.map("map", {
+            center: [lat, lon],
+            zoom: 16,
+            tap: false, // mejora respuesta en mobile
+          });
 
           L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
             maxZoom: 19,
           }).addTo(map);
 
-          marker = L.marker([lat, lon], { draggable: true }).addTo(map);
+          marker = L.marker([lat, lon], {
+            draggable: true,
+            autoPan: true,
+            autoPanSpeed: 50,
+          }).addTo(map);
+
+          marker.on("dragstart", function () {
+            map.dragging.disable();
+          });
 
           marker.on("dragend", function () {
             const pos = marker.getLatLng();
             currentLatLon = { lat: pos.lat, lon: pos.lng };
+            map.dragging.enable();
           });
         }
 
@@ -217,7 +237,7 @@
                 body: JSON.stringify({
                   lat: currentLatLon.lat,
                   lon: currentLatLon.lon, // <- aquí usamos lon, NO lng
-                  location_text: locationInput.value || null,
+                  // ya no mandamos location_text: se mantiene la original
                 }),
               }
             );

@@ -105,6 +105,18 @@
                 <div>
                   <div class="popup-titulo">${inc.tipo || "Reporte"}</div>
                   ${
+                    inc.foto_url
+                      ? `
+                        <div class="popup-foto">
+                          <img src="${inc.foto_url}" alt="Foto del reporte" />
+                          <a href="${inc.foto_url}" target="_blank" rel="noopener noreferrer">
+                            Ver foto en grande
+                          </a>
+                        </div>
+                      `
+                      : ""
+                  }
+                  ${
                     desc
                       ? `<div class="popup-detalle">${desc}</div>`
                       : ""
@@ -119,18 +131,7 @@
                       ? `<div class="popup-detalle"><small>Zona: ${zona}</small></div>`
                       : ""
                   }
-                  ${
-                    inc.foto_url
-                      ? `
-                        <div class="popup-foto">
-                          <img src="${inc.foto_url}" alt="Foto del reporte" />
-                          <a href="${inc.foto_url}" target="_blank" rel="noopener noreferrer">
-                            Ver foto en grande
-                          </a>
-                        </div>
-                      `
-                      : ""
-                  }
+                  
                 </div>
               `;
 

@@ -33,12 +33,19 @@
       }
 
       .popup-titulo {
-        font-weight: 600;
+        font-weight: 700;
+        font-size: 15px;
         margin-bottom: 4px;
       }
 
+      .popup-sub {
+        color: #475569;
+        font-size: 13px;
+        margin-bottom: 6px;
+      }
+
       .popup-detalle {
-        margin: 2px 0;
+        margin: 4px 0;
       }
 
       .popup-detalle small {
@@ -51,19 +58,16 @@
       }
 
       .popup-foto img {
-        max-width: 220px;
-        max-height: 160px;
+        max-width: 240px;
+        max-height: 180px;
         border-radius: 8px;
         display: block;
-        margin: 0 auto 4px;
+        margin: 0 auto 6px;
         object-fit: cover;
-      }
-
-      .popup-foto a {
-        font-size: 12px;
       }
     </style>
   </head>
+
   <body>
     <div id="map"></div>
 
@@ -75,88 +79,80 @@
     ></script>
 
     <script>
-      // Punto de partida aproximado: Tulum
+      // Vista inicial en Tulum
       const map = L.map("map").setView([20.214, -87.45], 12);
 
-      // Capa base OpenStreetMap
+      // Capa base OSM
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 19,
         attribution:
           '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       }).addTo(map);
 
-      // Fetch a tu API del backend
+      // Cargar incidentes publicados
       fetch("/api/incidentes")
         .then((res) => res.json())
         .then((incidentes) => {
-          const markersById = {};
+          const markers = {};
           const bounds = [];
 
           incidentes.forEach((inc) => {
-            if (inc.lat && inc.lon) {
-              const marker = L.marker([inc.lat, inc.lon]).addTo(map);
+            if (!inc.lat || !inc.lon) return;
 
-              const desc = inc.descripcion ? inc.descripcion : "";
-              const zona = inc.zona ? inc.zona : "";
-              const gravedad =
-                typeof inc.gravedad === "number" ? inc.gravedad : null;
+            const marker = L.marker([inc.lat, inc.lon]).addTo(map);
 
-              const popupHtml = `
-                <div>
-                  <div class="popup-titulo">${inc.tipo || "Reporte"}</div>
-                  ${
-                    inc.foto_url
-                      ? `
-                        <div class="popup-foto">
-                        <a href="${inc.foto_url}" target="_blank" rel="noopener noreferrer">
-                          <img src="${inc.foto_url}" alt="Foto del reporte" />
-                        </a>
-                        </div>
-                      `
-                      : ""
-                  }
-                  ${
-                    desc
-                      ? `<div class="popup-detalle">${desc}</div>`
-                      : ""
-                  }
-                  ${
-                    gravedad
-                      ? `<div class="popup-detalle"><small>Peligro percibido: ${gravedad}/5</small></div>`
-                      : ""
-                  }
-                  ${
-                    zona
-                      ? `<div class="popup-detalle"><small>Zona: ${zona}</small></div>`
-                      : ""
-                  }
-                  
-                </div>
-              `;
+            const popup = `
+              <div>
+                <div class="popup-titulo">${inc.categoria}</div>
+                <div class="popup-sub">${inc.subcategoria || ""}</div>
 
-              marker.bindPopup(popupHtml);
-              markersById[inc.id] = marker;
-              bounds.push([inc.lat, inc.lon]);
-            }
+                ${
+                  inc.foto_url
+                    ? `
+                    <div class="popup-foto">
+                      <a href="${inc.foto_url}" target="_blank" rel="noopener noreferrer">
+                        <img src="${inc.foto_url}" alt="Foto del reporte" />
+                      </a>
+                    </div>
+                    `
+                    : ""
+                }
+
+                ${
+                  inc.descripcion
+                    ? `<div class="popup-detalle">${inc.descripcion}</div>`
+                    : ""
+                }
+
+                ${
+                  inc.gravedad
+                    ? `<div class="popup-detalle"><small>Peligro percibido: ${inc.gravedad}/5</small></div>`
+                    : ""
+                }
+              </div>
+            `;
+
+            marker.bindPopup(popup);
+            markers[inc.id] = marker;
+            bounds.push([inc.lat, inc.lon]);
           });
 
-          // Ajustar vista al conjunto de marcadores si hay varios
+          // Ajustar vista a todos los marcadores
           if (bounds.length > 0) {
             map.fitBounds(bounds, { padding: [40, 40] });
           }
 
-          // Si viene ?id= o ?i= en la URL, centrar y abrir ese incidente
+          // Si viene ?i= o ?id= centrar y abrir el popup
           const params = new URLSearchParams(window.location.search);
-          const targetId = params.get("id") || params.get("i");
-          if (targetId && markersById[targetId]) {
-            const m = markersById[targetId];
+          const targetId = params.get("i") || params.get("id");
+
+          if (targetId && markers[targetId]) {
+            const m = markers[targetId];
             map.setView(m.getLatLng(), 17);
             m.openPopup();
           }
         })
-        .catch((err) => {
-          console.error("Error cargando incidentes para el mapa:", err);
-        });
+        .catch((err) => console.error("Error cargando incidentes:", err));
     </script>
   </body>
 </html>

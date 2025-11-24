@@ -1069,7 +1069,10 @@ async function notifyReporterDenegado(incidente, motivo) {
   const texto =
     `❌ Tu reporte de *${incidente.tipo}* no se publicó en Tulum Reporta.\n\n` +
     `Motivo:\n${motivo || "Sin motivo detallado."}\n\n` +
-    `Si consideras que fue un error, puedes volver a reportar mejorando la descripción y la foto.`;
+    `Te invitamos a volver a reportarlo corrigiendo estos puntos:\n` +
+    `- Asegúrate de que la foto muestre claramente el problema.\n` +
+    `- Verifica que la ubicación sea correcta y esté dentro de Tulum.\n` +
+    `- Da una descripción clara y concreta del problema.`;
 
   await sendMessage(incidente.phone, texto);
 }
@@ -1221,7 +1224,6 @@ async function geocodeAddress(direccionTexto) {
   }
 }
 
-
 // =======================
 // RUTAS ADMIN: APROBAR / DENEGAR
 // =======================
@@ -1320,6 +1322,36 @@ app.post("/admin/incidentes/:id/deny", checkAdminAuth, async (req, res) => {
     return res.json({ ok: true, incidente: updated });
   } catch (e) {
     console.error("Excepción en /admin/incidentes/:id/deny:", e);
+    return res.status(500).json({ error: "Error interno" });
+  }
+});
+
+// =======================
+// RUTA ADMIN: LISTAR PENDIENTES
+// =======================
+
+app.get("/admin/incidentes/pendientes", checkAdminAuth, async (req, res) => {
+  try {
+    if (!supabase) {
+      return res
+        .status(500)
+        .json({ error: "Supabase no configurado en el servidor" });
+    }
+
+    const { data, error } = await supabase
+      .from("incidentes")
+      .select("id, tipo, descripcion, zona, gravedad, estado, foto_url, created_at")
+      .eq("estado", "pendiente")
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.error("Error leyendo incidentes pendientes:", error);
+      return res.status(500).json({ error: "Error leyendo incidentes pendientes" });
+    }
+
+    return res.json({ ok: true, incidentes: data || [] });
+  } catch (e) {
+    console.error("Excepción en /admin/incidentes/pendientes:", e);
     return res.status(500).json({ error: "Error interno" });
   }
 });

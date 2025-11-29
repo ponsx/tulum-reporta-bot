@@ -24,11 +24,14 @@ app.use(express.static("public"));
 app.use(express.json());
 
 // URL públicas
-const MAP_BASE_URL = process.env.PUBLIC_MAP_BASE_URL || "https://www.tulumreporta.com/mapa";
-const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || "https://www.tulumreporta.com";
+const MAP_BASE_URL =
+  process.env.PUBLIC_MAP_BASE_URL || "https://www.tulumreporta.com/mapa";
+const PUBLIC_BASE_URL =
+  process.env.PUBLIC_BASE_URL || "https://www.tulumreporta.com";
 
 // Token edición
-const EDIT_TOKEN_SECRET = process.env.EDIT_TOKEN_SECRET || "CAMBIA_ESTE_SECRET_EN_PROD";
+const EDIT_TOKEN_SECRET =
+  process.env.EDIT_TOKEN_SECRET || "CAMBIA_ESTE_SECRET_EN_PROD";
 const EDIT_TOKEN_EXP_SECONDS = 60 * 60 * 24;
 
 // Admin
@@ -63,9 +66,9 @@ const CATEGORIES = {
       "Obstáculo en la vía",
       "Tope en mal estado",
       "Registro/tapa suelta",
-      "Señal rota o ausente"
+      "Señal rota o ausente",
     ],
-    subcategoriaOtro: "Otro problema"
+    subcategoriaOtro: "Otro problema",
   },
   "2": {
     nombre: "Luces y Electricidad 💡",
@@ -75,9 +78,9 @@ const CATEGORIES = {
       "Cables colgando",
       "Transformadores",
       "Zona muy oscura",
-      "Riesgo eléctrico"
+      "Riesgo eléctrico",
     ],
-    subcategoriaOtro: "Otro problema"
+    subcategoriaOtro: "Otro problema",
   },
   "3": {
     nombre: "Limpieza y Basura 🗑️",
@@ -87,9 +90,9 @@ const CATEGORIES = {
       "Tiradero ilegal",
       "Contenedor roto",
       "Animal muerto",
-      "Residuo voluminoso"
+      "Residuo voluminoso",
     ],
-    subcategoriaOtro: "Otro problema"
+    subcategoriaOtro: "Otro problema",
   },
   "4": {
     nombre: "Agua y Drenaje 💧",
@@ -99,9 +102,9 @@ const CATEGORIES = {
       "Encharcamiento/inundación",
       "Olor fuerte a drenaje",
       "Drenaje desbordado",
-      "Pozo o registro abierto"
+      "Pozo o registro abierto",
     ],
-    subcategoriaOtro: "Otro problema"
+    subcategoriaOtro: "Otro problema",
   },
   "5": {
     nombre: "Espacio Público 🌳",
@@ -111,9 +114,9 @@ const CATEGORIES = {
       "Vegetación obstruyendo el paso",
       "Mobiliario urbano roto",
       "Parque o área verde dañada",
-      "Estructura en mal estado"
+      "Estructura en mal estado",
     ],
-    subcategoriaOtro: "Otro problema"
+    subcategoriaOtro: "Otro problema",
   },
   "6": {
     nombre: "Fauna Salvaje 🐍",
@@ -121,9 +124,9 @@ const CATEGORIES = {
       "Animal salvaje peligroso",
       "Panal de abejas/avispas",
       "Animal herido/agresivo",
-      "Animal doméstico suelto"
+      "Animal doméstico suelto",
     ],
-    subcategoriaOtro: "Otro problema"
+    subcategoriaOtro: "Otro problema",
   },
   "7": {
     nombre: "Construcción y Obras 🚧",
@@ -133,14 +136,14 @@ const CATEGORIES = {
       "Material de obra en calle",
       "Obra abandonada",
       "Valla/protección dañada",
-      "Excavación peligrosa"
+      "Excavación peligrosa",
     ],
-    subcategoriaOtro: "Otro problema"
+    subcategoriaOtro: "Otro problema",
   },
   "0": {
     nombre: "Otro tipo de problema",
-    subcategorias: []
-  }
+    subcategorias: [],
+  },
 };
 
 // =======================
@@ -218,7 +221,8 @@ app.get("/e/:shortId", async (req, res) => {
     .single();
 
   if (error || !data) return res.status(404).send("Enlace inválido");
-  if (new Date(data.expires_at) < new Date()) return res.status(410).send("Expirado");
+  if (new Date(data.expires_at) < new Date())
+    return res.status(410).send("Expirado");
 
   return res.redirect(
     `/editar.html?incidentId=${data.incident_id}&t=${encodeURIComponent(
@@ -357,8 +361,7 @@ async function handleIncomingMessage(phone, text, location, image) {
   switch (user.state) {
     case "ESPERANDO_CATEGORIA": {
       const cat = CATEGORIES[text];
-      if (!cat)
-        return sendMessage(phone, "Elige un número válido (0–7)");
+      if (!cat) return sendMessage(phone, "Elige un número válido (0–7)");
 
       setUserState(phone, "ESPERANDO_SUBCATEGORIA", {
         categoria: cat.nombre,
@@ -372,7 +375,10 @@ async function handleIncomingMessage(phone, text, location, image) {
         .concat(`0. ${cat.subcategoriaOtro}`)
         .join("\n");
 
-      return sendMessage(phone, `*${cat.nombre}*\nElige una opción:\n${subMenu}`);
+      return sendMessage(
+        phone,
+        `*${cat.nombre}*\nElige una opción:\n${subMenu}`
+      );
     }
 
     case "ESPERANDO_SUBCATEGORIA": {
@@ -387,35 +393,33 @@ async function handleIncomingMessage(phone, text, location, image) {
         if (idx === 0) sub = cat.subcategoriaOtro;
         else if (idx >= 1 && idx <= cat.subcategorias.length)
           sub = cat.subcategorias[idx - 1];
-        else
-          return sendMessage(phone, "Número inválido.");
+        else return sendMessage(phone, "Número inválido.");
       }
 
       setUserState(phone, "ESPERANDO_FOTO", { ...user.data, subcategoria: sub });
       return sendMessage(phone, "Envía una *foto* del problema.");
     }
 
-   case "ESPERANDO_FOTO": {
-  if (!image) return sendMessage(phone, "Necesito una foto.");
+    case "ESPERANDO_FOTO": {
+      if (!image) return sendMessage(phone, "Necesito una foto.");
 
-  const foto_url = await guardarImagenEnSupabase(image);
+      const foto_url = await guardarImagenEnSupabase(image);
 
-  if (!foto_url) {
-    console.error("Error subiendo imagen a Supabase (reportes-fotos)");
-    return sendMessage(
-      phone,
-      "Ocurrió un error al guardar la foto de tu reporte. Intenta enviar la imagen de nuevo."
-    );
-  }
+      if (!foto_url) {
+        console.error("Error subiendo imagen a Supabase (reportes-fotos)");
+        return sendMessage(
+          phone,
+          "Ocurrió un error al guardar la foto de tu reporte. Intenta enviar la imagen de nuevo."
+        );
+      }
 
-  setUserState(phone, "ESPERANDO_DESCRIPCION", {
-    ...user.data,
-    foto_url,
-  });
+      setUserState(phone, "ESPERANDO_DESCRIPCION", {
+        ...user.data,
+        foto_url,
+      });
 
-  return sendMessage(phone, "Describe brevemente el problema.");
-}
-
+      return sendMessage(phone, "Describe brevemente el problema.");
+    }
 
     case "ESPERANDO_DESCRIPCION": {
       if (!text) return sendMessage(phone, "Escribe la descripción.");
@@ -490,6 +494,14 @@ async function handleIncomingMessage(phone, text, location, image) {
       const data = { ...user.data, gravedad };
       const prioridad = data.gravedad * 2;
 
+      if (!data.foto_url) {
+        console.error("Falta foto_url en datos antes del INSERT:", data);
+        return sendMessage(
+          phone,
+          "Hubo un problema con la foto del reporte. Intenta empezar de nuevo."
+        );
+      }
+
       const { data: inserted, error } = await supabase
         .from("reportes")
         .insert({
@@ -511,7 +523,7 @@ async function handleIncomingMessage(phone, text, location, image) {
         .single();
 
       if (error) {
-        console.error(error);
+        console.error("Supabase insert error:", error);
         return sendMessage(phone, "Hubo un error guardando tu reporte.");
       }
 
@@ -522,7 +534,9 @@ async function handleIncomingMessage(phone, text, location, image) {
         short_id: shortId,
         incident_id: inserted.id,
         token: editToken,
-        expires_at: new Date(Date.now() + EDIT_TOKEN_EXP_SECONDS * 1000).toISOString(),
+        expires_at: new Date(
+          Date.now() + EDIT_TOKEN_EXP_SECONDS * 1000
+        ).toISOString(),
       });
 
       const editUrl = `${PUBLIC_BASE_URL}/e/${shortId}`;
@@ -564,11 +578,16 @@ async function sendMessage(to, text) {
   const token = process.env.WHATSAPP_ACCESS_TOKEN;
   const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
 
-  if (!token || !phoneId) return;
+  if (!token || !phoneId) {
+    console.error(
+      "Falta WHATSAPP_ACCESS_TOKEN o WHATSAPP_PHONE_NUMBER_ID para enviar mensajes."
+    );
+    return;
+  }
 
   const url = `https://graph.facebook.com/v20.0/${phoneId}/messages`;
 
-  await fetch(url, {
+  const res = await fetch(url, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -581,6 +600,14 @@ async function sendMessage(to, text) {
       text: { body: text },
     }),
   });
+
+  if (!res.ok) {
+    console.error(
+      "Error enviando mensaje de WhatsApp:",
+      res.status,
+      await res.text()
+    );
+  }
 }
 
 // =======================
@@ -624,34 +651,69 @@ async function notifyReporterDenegado(reporte, motivo) {
 
 async function guardarImagenEnSupabase(image) {
   const token = process.env.WHATSAPP_ACCESS_TOKEN;
-  if (!token) return null;
+  if (!token) {
+    console.error(
+      "Falta WHATSAPP_ACCESS_TOKEN para descargar y guardar la imagen."
+    );
+    return null;
+  }
 
-  const metaRes = await fetch(`https://graph.facebook.com/v20.0/${image.id}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  try {
+    const metaRes = await fetch(
+      `https://graph.facebook.com/v20.0/${image.id}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
 
-  const meta = await metaRes.json();
-  const fileRes = await fetch(meta.url, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+    if (!metaRes.ok) {
+      console.error(
+        "Error leyendo metadatos de imagen WhatsApp:",
+        metaRes.status,
+        await metaRes.text()
+      );
+      return null;
+    }
 
-  const buffer = Buffer.from(await fileRes.arrayBuffer());
-  const ext = image.mime_type?.split("/")?.[1] || "jpg";
-  const fileName = `reporte-${Date.now()}-${image.id}.${ext}`;
+    const meta = await metaRes.json();
 
-  const { error } = await supabase.storage
-    .from("reportes-fotos")
-    .upload(fileName, buffer, {
-      contentType: image.mime_type,
+    const fileRes = await fetch(meta.url, {
+      headers: { Authorization: `Bearer ${token}` },
     });
 
-  if (error) return null;
+    if (!fileRes.ok) {
+      console.error(
+        "Error descargando imagen desde WhatsApp:",
+        fileRes.status,
+        await fileRes.text()
+      );
+      return null;
+    }
 
-  const { data: publicData } = supabase.storage
-    .from("reportes-fotos")
-    .getPublicUrl(fileName);
+    const buffer = Buffer.from(await fileRes.arrayBuffer());
+    const ext = image.mime_type?.split("/")?.[1] || "jpg";
+    const fileName = `reporte-${Date.now()}-${image.id}.${ext}`;
 
-  return publicData.publicUrl;
+    const { error } = await supabase.storage
+      .from("reportes-fotos")
+      .upload(fileName, buffer, {
+        contentType: image.mime_type,
+      });
+
+    if (error) {
+      console.error("Error subiendo a reportes-fotos:", error);
+      return null;
+    }
+
+    const { data: publicData } = supabase.storage
+      .from("reportes-fotos")
+      .getPublicUrl(fileName);
+
+    return publicData.publicUrl;
+  } catch (e) {
+    console.error("Excepción en guardarImagenEnSupabase:", e);
+    return null;
+  }
 }
 
 // =======================

@@ -231,16 +231,16 @@ app.get("/e/:shortId", async (req, res) => {
 // API MAPA (PÚBLICO)
 // =======================
 
-app.get("/api/incidentes", async (req, res) => {
+app.get("/api/reportes", async (req, res) => {
   const { data, error } = await supabase
-    .from("incidentes")
+    .from("reportes")
     .select(
       "id, categoria, subcategoria, descripcion, gravedad, estado, foto_url, lat, lon, created_at"
     )
     .eq("estado", "publicado")
     .order("created_at", { ascending: false });
 
-  if (error) return res.status(500).json({ error: "Error leyendo incidentes" });
+  if (error) return res.status(500).json({ error: "Error leyendo reportes" });
 
   res.json(data);
 });
@@ -249,7 +249,7 @@ app.get("/api/incidentes", async (req, res) => {
 // API EDITOR: GET
 // =======================
 
-app.get("/api/incidentes/:id", async (req, res) => {
+app.get("/api/reportes/:id", async (req, res) => {
   const token = req.query.token;
   if (!token) return res.status(401).json({ error: "Falta token" });
 
@@ -258,7 +258,7 @@ app.get("/api/incidentes/:id", async (req, res) => {
     return res.status(403).json({ error: "Token inválido" });
 
   const { data, error } = await supabase
-    .from("incidentes")
+    .from("reportes")
     .select("id, foto_url, lat, lon")
     .eq("id", req.params.id)
     .single();
@@ -271,7 +271,7 @@ app.get("/api/incidentes/:id", async (req, res) => {
 // API EDITOR: UPDATE LOCATION
 // =======================
 
-app.put("/api/incidentes/:id/location", async (req, res) => {
+app.put("/api/reportes/:id/location", async (req, res) => {
   const token = req.query.token;
   const { lat, lon } = req.body;
 
@@ -285,7 +285,7 @@ app.put("/api/incidentes/:id/location", async (req, res) => {
     return res.status(400).json({ error: "Coordenadas fuera de Tulum" });
 
   const { data, error } = await supabase
-    .from("incidentes")
+    .from("reportes")
     .update({ lat, lon })
     .eq("id", req.params.id)
     .select()
@@ -481,7 +481,7 @@ async function handleIncomingMessage(phone, text, location, image) {
       const prioridad = data.gravedad * 2;
 
       const { data: inserted, error } = await supabase
-        .from("incidentes")
+        .from("reportes")
         .insert({
           phone,
           categoria: data.categoria,
@@ -630,7 +630,7 @@ async function guardarImagenEnSupabase(image) {
   const fileName = `incidente-${Date.now()}-${image.id}.${ext}`;
 
   const { error } = await supabase.storage
-    .from("incidentes-fotos")
+    .from("reportes-fotos")
     .upload(fileName, buffer, {
       contentType: image.mime_type,
     });
@@ -638,7 +638,7 @@ async function guardarImagenEnSupabase(image) {
   if (error) return null;
 
   const { data: publicData } = supabase.storage
-    .from("incidentes-fotos")
+    .from("reportes-fotos")
     .getPublicUrl(fileName);
 
   return publicData.publicUrl;
@@ -667,11 +667,11 @@ async function geocodeAddress(text) {
 // ADMIN: MODERAR
 // =======================
 
-app.post("/admin/incidentes/:id/approve", checkAdminAuth, async (req, res) => {
+app.post("/admin/reportes/:id/approve", checkAdminAuth, async (req, res) => {
   const { id } = req.params;
 
   const { data: updated, error } = await supabase
-    .from("incidentes")
+    .from("reportes")
     .update({ estado: "publicado", denied_reason: null })
     .eq("id", id)
     .select()
@@ -683,12 +683,12 @@ app.post("/admin/incidentes/:id/approve", checkAdminAuth, async (req, res) => {
   res.json({ ok: true, incidente: updated });
 });
 
-app.post("/admin/incidentes/:id/deny", checkAdminAuth, async (req, res) => {
+app.post("/admin/reportes/:id/deny", checkAdminAuth, async (req, res) => {
   const { id } = req.params;
   const motivo = req.body?.motivo || null;
 
   const { data: updated, error } = await supabase
-    .from("incidentes")
+    .from("reportes")
     .update({ estado: "rechazado", denied_reason: motivo })
     .eq("id", id)
     .select()
@@ -704,9 +704,9 @@ app.post("/admin/incidentes/:id/deny", checkAdminAuth, async (req, res) => {
 // ADMIN LISTA PENDIENTES
 // =======================
 
-app.get("/admin/incidentes/pendientes", checkAdminAuth, async (req, res) => {
+app.get("/admin/reportes/pendientes", checkAdminAuth, async (req, res) => {
   const { data, error } = await supabase
-    .from("incidentes")
+    .from("reportes")
     .select(
       "id, categoria, subcategoria, descripcion, gravedad, estado, foto_url, created_at"
     )
@@ -715,7 +715,7 @@ app.get("/admin/incidentes/pendientes", checkAdminAuth, async (req, res) => {
 
   if (error) return res.status(500).json({ error: "Error leyendo" });
 
-  res.json({ ok: true, incidentes: data });
+  res.json({ ok: true, reportes: data });
 });
 
 // =======================

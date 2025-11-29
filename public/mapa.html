@@ -89,14 +89,14 @@
           '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       }).addTo(map);
 
-      // Cargar incidentes publicados
-      fetch("/api/incidentes")
+      // Cargar reportes publicados
+      fetch("/api/reportes")
         .then((res) => res.json())
-        .then((incidentes) => {
+        .then((reportes) => {
           const markers = {};
           const bounds = [];
 
-          incidentes.forEach((inc) => {
+          reportes.forEach((inc) => {
             if (!inc.lat || !inc.lon) return;
 
             const marker = L.marker([inc.lat, inc.lon]).addTo(map);

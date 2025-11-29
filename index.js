@@ -406,7 +406,7 @@ async function handleIncomingMessage(phone, text, location, image) {
       const foto_url = await guardarImagenEnSupabase(image);
 
       if (!foto_url) {
-        console.error("Error subiendo imagen a Supabase (reportes-fotos)");
+        console.error("Error subiendo imagen a Supabase (reporte-foto)");
         return sendMessage(
           phone,
           "Ocurrió un error al guardar la foto de tu reporte. Intenta enviar la imagen de nuevo."
@@ -695,18 +695,18 @@ async function guardarImagenEnSupabase(image) {
     const fileName = `reporte-${Date.now()}-${image.id}.${ext}`;
 
     const { error } = await supabase.storage
-      .from("reportes-fotos")
+      .from("reporte-foto")
       .upload(fileName, buffer, {
         contentType: image.mime_type,
       });
 
     if (error) {
-      console.error("Error subiendo a reportes-fotos:", error);
+      console.error("Error subiendo a reporte-foto:", error);
       return null;
     }
 
     const { data: publicData } = supabase.storage
-      .from("reportes-fotos")
+      .from("reporte-foto")
       .getPublicUrl(fileName);
 
     return publicData.publicUrl;

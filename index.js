@@ -395,17 +395,27 @@ async function handleIncomingMessage(phone, text, location, image) {
       return sendMessage(phone, "Envía una *foto* del problema.");
     }
 
-    case "ESPERANDO_FOTO": {
-      if (!image) return sendMessage(phone, "Necesito una foto.");
+   case "ESPERANDO_FOTO": {
+  if (!image) return sendMessage(phone, "Necesito una foto.");
 
-      const foto_url = await guardarImagenEnSupabase(image);
-      setUserState(phone, "ESPERANDO_DESCRIPCION", {
-        ...user.data,
-        foto_url,
-      });
+  const foto_url = await guardarImagenEnSupabase(image);
 
-      return sendMessage(phone, "Describe brevemente el problema.");
-    }
+  if (!foto_url) {
+    console.error("Error subiendo imagen a Supabase (reportes-fotos)");
+    return sendMessage(
+      phone,
+      "Ocurrió un error al guardar la foto de tu reporte. Intenta enviar la imagen de nuevo."
+    );
+  }
+
+  setUserState(phone, "ESPERANDO_DESCRIPCION", {
+    ...user.data,
+    foto_url,
+  });
+
+  return sendMessage(phone, "Describe brevemente el problema.");
+}
+
 
     case "ESPERANDO_DESCRIPCION": {
       if (!text) return sendMessage(phone, "Escribe la descripción.");

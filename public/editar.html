@@ -138,7 +138,7 @@
             setStatus("Cargando reporte...");
 
             const res = await fetch(
-              `/api/incidentes/${encodeURIComponent(
+              `/api/reportes/${encodeURIComponent(
                 incidentId
               )}?token=${encodeURIComponent(token)}`
             );
@@ -199,7 +199,7 @@
 
           try {
             const res = await fetch(
-              `/api/incidentes/${encodeURIComponent(
+              `/api/reportes/${encodeURIComponent(
                 incidentId
               )}/location?token=${encodeURIComponent(token)}`,
               {

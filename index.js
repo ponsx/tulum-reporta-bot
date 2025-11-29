@@ -645,6 +645,24 @@ async function notifyReporterDenegado(reporte, motivo) {
   );
 }
 
+async function notifyReporterAsignado(reporte) {
+  await sendMessage(
+    reporte.phone,
+    `ℹ️ Tu reporte de *${reporte.categoria}* fue *asignado* a un responsable${
+      reporte.responsable ? `: *${reporte.responsable}*` : ""
+    }.\nTe avisaremos cuando se marque como resuelto.\n\nLo que reportas, importa.`
+  );
+}
+
+async function notifyReporterResuelto(reporte) {
+  await sendMessage(
+    reporte.phone,
+    `✅ Tu reporte de *${reporte.categoria}* fue marcado como *resuelto*.\n` +
+      `Si el problema continúa, puedes volver a reportarlo.\n\nLo que reportas, importa.`
+  );
+}
+
+
 // =======================
 // GUARDAR IMAGEN
 // =======================
@@ -771,6 +789,52 @@ app.post("/admin/reportes/:id/deny", checkAdminAuth, async (req, res) => {
   await notifyReporterDenegado(updated, motivo);
   res.json({ ok: true, reporte: updated });
 });
+
+
+// =======================
+// ADMIN: NOTIFICAR CAMBIO DE ESTADO
+// =======================
+
+app.post("/admin/reportes/:id/notificar-estado", checkAdminAuth, async (req, res) => {
+  const { id } = req.params;
+
+  const { data: reporte, error } = await supabase
+    .from("reportes")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error || !reporte) {
+    console.error("Error leyendo reporte para notificar estado:", error);
+    return res.status(404).json({ error: "Reporte no encontrado" });
+  }
+
+  try {
+    switch (reporte.estado) {
+      case "publicado":
+        await notifyReporterPublicacion(reporte);
+        break;
+      case "rechazado":
+        await notifyReporterDenegado(reporte, reporte.denied_reason);
+        break;
+      case "asignado":
+        await notifyReporterAsignado(reporte);
+        break;
+      case "resuelto":
+        await notifyReporterResuelto(reporte);
+        break;
+      default:
+        // Estados que no generan notificación
+        break;
+    }
+
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error("Error enviando notificación de estado:", e);
+    return res.status(500).json({ error: "Error enviando la notificación" });
+  }
+});
+
 
 // =======================
 // ADMIN LISTA PENDIENTES

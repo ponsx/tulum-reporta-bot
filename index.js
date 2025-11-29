@@ -292,7 +292,7 @@ app.put("/api/reportes/:id/location", async (req, res) => {
     .single();
 
   if (error) return res.status(500).json({ error: "Error actualizando" });
-  res.json({ ok: true, incidente: data });
+  res.json({ ok: true, reporte: data });
 });
 
 // =======================
@@ -517,7 +517,7 @@ async function handleIncomingMessage(phone, text, location, image) {
 
       const editUrl = `${PUBLIC_BASE_URL}/e/${shortId}`;
 
-      await notifyAdminNuevoIncidente(inserted, editUrl);
+      await notifyAdminNuevoReporte(inserted, editUrl);
 
       await sendMessage(
         phone,
@@ -577,32 +577,32 @@ async function sendMessage(to, text) {
 // NOTIFICACIONES
 // =======================
 
-async function notifyAdminNuevoIncidente(incidente, editUrl) {
+async function notifyAdminNuevoReporte(reporte, editUrl) {
   if (!ADMIN_PHONE) return;
 
   const texto =
     `🔔 Nuevo reporte pendiente en *Tulum Reporta*.\n\n` +
-    `ID: ${incidente.id}\n` +
-    `Categoría: ${incidente.categoria}\n` +
-    `Subcategoría: ${incidente.subcategoria}\n` +
-    `Gravedad: ${incidente.gravedad}\n\n` +
+    `ID: ${reporte.id}\n` +
+    `Categoría: ${reporte.categoria}\n` +
+    `Subcategoría: ${reporte.subcategoria}\n` +
+    `Gravedad: ${reporte.gravedad}\n\n` +
     `Editar ubicación (24 h):\n${editUrl}\n`;
 
   await sendMessage(ADMIN_PHONE, texto);
 }
 
-async function notifyReporterPublicacion(incidente) {
+async function notifyReporterPublicacion(reporte) {
   await sendMessage(
-    incidente.phone,
-    `✅ Tu reporte de *${incidente.categoria}* fue *publicado*.\n` +
-      `${MAP_BASE_URL}?i=${incidente.id}`
+    reporte.phone,
+    `✅ Tu reporte de *${reporte.categoria}* fue *publicado*.\n` +
+      `${MAP_BASE_URL}?i=${reporte.id}`
   );
 }
 
-async function notifyReporterDenegado(incidente, motivo) {
+async function notifyReporterDenegado(reporte, motivo) {
   await sendMessage(
-    incidente.phone,
-    `❌ Tu reporte de *${incidente.categoria}* fue rechazado.\n` +
+    reporte.phone,
+    `❌ Tu reporte de *${reporte.categoria}* fue rechazado.\n` +
       (motivo || "Sin motivo.") +
       `\nPuedes volver a enviarlo siguiendo las recomendaciones.`
   );
@@ -627,7 +627,7 @@ async function guardarImagenEnSupabase(image) {
 
   const buffer = Buffer.from(await fileRes.arrayBuffer());
   const ext = image.mime_type?.split("/")?.[1] || "jpg";
-  const fileName = `incidente-${Date.now()}-${image.id}.${ext}`;
+  const fileName = `reporte-${Date.now()}-${image.id}.${ext}`;
 
   const { error } = await supabase.storage
     .from("reportes-fotos")
@@ -680,7 +680,7 @@ app.post("/admin/reportes/:id/approve", checkAdminAuth, async (req, res) => {
   if (error) return res.status(500).json({ error: "Error actualizando" });
 
   await notifyReporterPublicacion(updated);
-  res.json({ ok: true, incidente: updated });
+  res.json({ ok: true, reporte: updated });
 });
 
 app.post("/admin/reportes/:id/deny", checkAdminAuth, async (req, res) => {
@@ -697,7 +697,7 @@ app.post("/admin/reportes/:id/deny", checkAdminAuth, async (req, res) => {
   if (error) return res.status(500).json({ error: "Error actualizando" });
 
   await notifyReporterDenegado(updated, motivo);
-  res.json({ ok: true, incidente: updated });
+  res.json({ ok: true, reporte: updated });
 });
 
 // =======================

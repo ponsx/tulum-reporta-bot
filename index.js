@@ -145,6 +145,7 @@ const CATEGORIES = {
   "0": {
     nombre: "Otro tipo de problema",
     subcategorias: [],
+    subcategoriaOtro: "Otro tipo de problema",
   },
 };
 
@@ -360,24 +361,24 @@ async function handleIncomingMessage(phone, text, location, image) {
     return setUserState(phone, "ESPERANDO_CATEGORIA");
   }
 
-      case "ESPERANDO_CATEGORIA": {
+  switch (user.state) {
+    case "ESPERANDO_CATEGORIA": {
       const cat = CATEGORIES[text];
       if (!cat) return sendMessage(phone, "Elige un número válido (0–7)");
 
-      // Si NO tiene subcategorías (caso "0")
+      // Si la categoría no tiene subcategorías (caso "0"),
+      // saltamos directamente a pedir foto y usamos una subcategoría genérica.
       if (cat.subcategorias.length === 0) {
-        // Guardamos categoría y una subcategoría genérica
         setUserState(phone, "ESPERANDO_FOTO", {
           ...user.data,
           categoria: cat.nombre,
           subcategoria: "Otro tipo de problema",
         });
 
-        // Pasamos directamente a pedir la foto
         return sendMessage(phone, "Envía una *foto* del problema.");
       }
 
-      // Resto de categorías normales (1–7): pedir subcategoría numérica
+      // Resto de categorías: pedir subcategoría numérica
       setUserState(phone, "ESPERANDO_SUBCATEGORIA", {
         categoria: cat.nombre,
       });
@@ -392,7 +393,6 @@ async function handleIncomingMessage(phone, text, location, image) {
         `*${cat.nombre}*\nElige una opción:\n${subMenu}`
       );
     }
-
 
     case "ESPERANDO_SUBCATEGORIA": {
       const cat = Object.entries(CATEGORIES).find(
@@ -675,7 +675,6 @@ async function notifyReporterResuelto(reporte) {
   );
 }
 
-
 // =======================
 // GUARDAR IMAGEN
 // =======================
@@ -803,51 +802,52 @@ app.post("/admin/reportes/:id/deny", checkAdminAuth, async (req, res) => {
   res.json({ ok: true, reporte: updated });
 });
 
-
 // =======================
 // ADMIN: NOTIFICAR CAMBIO DE ESTADO
 // =======================
 
-app.post("/admin/reportes/:id/notificar-estado", checkAdminAuth, async (req, res) => {
-  const { id } = req.params;
+app.post(
+  "/admin/reportes/:id/notificar-estado",
+  checkAdminAuth,
+  async (req, res) => {
+    const { id } = req.params;
 
-  const { data: reporte, error } = await supabase
-    .from("reportes")
-    .select("*")
-    .eq("id", id)
-    .single();
+    const { data: reporte, error } = await supabase
+      .from("reportes")
+      .select("*")
+      .eq("id", id)
+      .single();
 
-  if (error || !reporte) {
-    console.error("Error leyendo reporte para notificar estado:", error);
-    return res.status(404).json({ error: "Reporte no encontrado" });
-  }
-
-  try {
-    switch (reporte.estado) {
-      case "publicado":
-        await notifyReporterPublicacion(reporte);
-        break;
-      case "rechazado":
-        await notifyReporterDenegado(reporte, reporte.denied_reason);
-        break;
-      case "asignado":
-        await notifyReporterAsignado(reporte);
-        break;
-      case "resuelto":
-        await notifyReporterResuelto(reporte);
-        break;
-      default:
-        // Estados que no generan notificación
-        break;
+    if (error || !reporte) {
+      console.error("Error leyendo reporte para notificar estado:", error);
+      return res.status(404).json({ error: "Reporte no encontrado" });
     }
 
-    return res.json({ ok: true });
-  } catch (e) {
-    console.error("Error enviando notificación de estado:", e);
-    return res.status(500).json({ error: "Error enviando la notificación" });
-  }
-});
+    try {
+      switch (reporte.estado) {
+        case "publicado":
+          await notifyReporterPublicacion(reporte);
+          break;
+        case "rechazado":
+          await notifyReporterDenegado(reporte, reporte.denied_reason);
+          break;
+        case "asignado":
+          await notifyReporterAsignado(reporte);
+          break;
+        case "resuelto":
+          await notifyReporterResuelto(reporte);
+          break;
+        default:
+        // Estados que no generan notificación
+      }
 
+      return res.json({ ok: true });
+    } catch (e) {
+      console.error("Error enviando notificación de estado:", e);
+      return res.status(500).json({ error: "Error enviando la notificación" });
+    }
+  }
+);
 
 // =======================
 // ADMIN LISTA PENDIENTES

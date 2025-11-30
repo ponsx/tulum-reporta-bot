@@ -42,11 +42,18 @@
         font-size: 13px;
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 10px;
         border: 1px solid #e2e8f0;
+        flex-wrap: wrap;
       }
 
-      #categoriaFilter {
+      #toolbar label {
+        font-weight: 500;
+        color: #0f172a;
+      }
+
+      #categoriaFilter,
+      #timeFilter {
         border-radius: 999px;
         border: 1px solid #cbd5f5;
         padding: 4px 10px;
@@ -100,7 +107,7 @@
         font-weight: 700;
 
         /* CONTRASTE MEJORADO */
-        border: 2px solid rgba(255, 255, 255, 1) !important;
+        border: 2px solid rgba(0, 0, 0, 0.25) !important;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
       }
 
@@ -118,9 +125,18 @@
   <body>
     <!-- Barra de filtros -->
     <div id="toolbar">
-      <label>Categoría:</label>
+      <label for="categoriaFilter">Categoría:</label>
       <select id="categoriaFilter">
         <option value="">Todas las categorías</option>
+      </select>
+
+      <label for="timeFilter">Tiempo:</label>
+      <select id="timeFilter">
+        <option value="all">Todos</option>
+        <option value="24h">Últimas 24h</option>
+        <option value="week">Última semana</option>
+        <option value="month">Este mes</option>
+        <option value="year">Este año</option>
       </select>
     </div>
 
@@ -161,7 +177,7 @@
         layers: [capaOSM]
       });
 
-      // Control de capas (solo una satelital como pediste)
+      // Control de capas
       L.control.layers(
         {
           "Mapa estándar": capaOSM,
@@ -221,7 +237,11 @@
 
             ${
               inc.foto_url
-                ? `<div class="popup-foto"><a href="${inc.foto_url}" target="_blank"><img src="${inc.foto_url}" /></a></div>`
+                ? `<div class="popup-foto">
+                    <a href="${inc.foto_url}" target="_blank" rel="noopener noreferrer">
+                      <img src="${inc.foto_url}" />
+                    </a>
+                  </div>`
                 : ""
             }
 
@@ -242,10 +262,15 @@
 
       function populateCategoriaFilter(reportes) {
         const select = document.getElementById("categoriaFilter");
-        const categorias = [...new Set(reportes.map(r => r.categoria))].sort();
+        const categorias = Array.from(
+          new Set(
+            reportes
+              .map((r) => r.categoria)
+              .filter((c) => typeof c === "string" && c.trim() !== "")
+          )
+        ).sort((a, b) => a.localeCompare(b, "es"));
 
-        categorias.forEach(cat => {
-          if (!cat) return;
+        categorias.forEach((cat) => {
           const opt = document.createElement("option");
           opt.value = cat;
           opt.textContent = cat;
@@ -253,20 +278,57 @@
         });
       }
 
+      // ---- Filtro temporal ----
+      function pasaFiltroTiempo(inc, filtroTiempo) {
+        if (!filtroTiempo || filtroTiempo === "all") return true;
+        if (!inc.created_at) return true; // si no hay fecha, no lo escondemos
+
+        const ahora = new Date();
+        const creado = new Date(inc.created_at);
+        if (isNaN(creado.getTime())) return true;
+
+        const diffMs = ahora - creado;
+        const unDiaMs = 24 * 60 * 60 * 1000;
+        const unaSemanaMs = 7 * unDiaMs;
+
+        const yearNow = ahora.getFullYear();
+        const monthNow = ahora.getMonth(); // 0–11
+        const yearCreated = creado.getFullYear();
+        const monthCreated = creado.getMonth();
+
+        switch (filtroTiempo) {
+          case "24h":
+            return diffMs <= unDiaMs;
+          case "week":
+            return diffMs <= unaSemanaMs;
+          case "month":
+            return yearCreated === yearNow && monthCreated === monthNow;
+          case "year":
+            return yearCreated === yearNow;
+          default:
+            return true;
+        }
+      }
+
       function renderMarkers() {
         markersLayer.clearLayers();
         markersById = {};
 
         const categoria = document.getElementById("categoriaFilter").value;
+        const filtroTiempo = document.getElementById("timeFilter").value;
         const bounds = [];
 
-        allReportes.forEach(inc => {
+        allReportes.forEach((inc) => {
           if (!inc.lat || !inc.lon) return;
 
+          // filtro categoría
           if (categoria && inc.categoria !== categoria) return;
 
+          // filtro temporal
+          if (!pasaFiltroTiempo(inc, filtroTiempo)) return;
+
           const marker = L.marker([inc.lat, inc.lon], {
-            icon: createCategoriaIcon(inc.categoria)
+            icon: createCategoriaIcon(inc.categoria),
           }).addTo(markersLayer);
 
           marker.bindPopup(createPopupContent(inc));
@@ -274,18 +336,29 @@
           bounds.push([inc.lat, inc.lon]);
         });
 
-        if (bounds.length) map.fitBounds(bounds, { padding: [40, 40] });
+        if (bounds.length) {
+          map.fitBounds(bounds, { padding: [40, 40] });
+        }
       }
 
+      // Cargar reportes (asegúrate de que /api/reportes incluye created_at)
       fetch("/api/reportes")
-        .then(res => res.json())
-        .then(reportes => {
+        .then((res) => res.json())
+        .then((reportes) => {
           allReportes = reportes || [];
           populateCategoriaFilter(allReportes);
           renderMarkers();
-        });
+        })
+        .catch((err) => console.error("Error cargando reportes:", err));
 
-      document.getElementById("categoriaFilter").addEventListener("change", renderMarkers);
+      // Eventos de filtros
+      document
+        .getElementById("categoriaFilter")
+        .addEventListener("change", renderMarkers);
+
+      document
+        .getElementById("timeFilter")
+        .addEventListener("change", renderMarkers);
     </script>
   </body>
 </html>

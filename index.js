@@ -445,7 +445,7 @@ async function handleIncomingMessage(phone, text, location, image) {
 
       return sendMessage(
         phone,
-        "Indica la *ubicación*: ubicación de WhatsApp o dirección completa."
+        "Indica la *ubicación*: ubicación de WhatsApp o dirección completa_(Calle, número y colonia o población)_."
       );
     }
 

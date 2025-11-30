@@ -360,8 +360,7 @@ async function handleIncomingMessage(phone, text, location, image) {
     return setUserState(phone, "ESPERANDO_CATEGORIA");
   }
 
-  switch (user.state) {
-        case "ESPERANDO_CATEGORIA": {
+      case "ESPERANDO_CATEGORIA": {
       const cat = CATEGORIES[text];
       if (!cat) return sendMessage(phone, "Elige un número válido (0–7)");
 
@@ -394,7 +393,6 @@ async function handleIncomingMessage(phone, text, location, image) {
       );
     }
 
-    }
 
     case "ESPERANDO_SUBCATEGORIA": {
       const cat = Object.entries(CATEGORIES).find(

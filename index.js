@@ -445,7 +445,7 @@ async function handleIncomingMessage(phone, text, location, image) {
 
       return sendMessage(
         phone,
-        "Indica la *ubicación*: ubicación de WhatsApp o dirección completa_(Calle, número y colonia o población)_."
+        "Indica la *ubicación*: ubicación de WhatsApp o dirección completa _(Calle, número y colonia o población)_."
       );
     }
 
@@ -560,9 +560,9 @@ async function handleIncomingMessage(phone, text, location, image) {
       await sendMessage(
         phone,
         `✅ Gracias por tu reporte de *${data.categoria}*.\n\n` +
-          `Tu reporte pasará por revisión antes de publicarse.\n\n` +
+          `Lo revisaremos antes de publicarlo,.\n\n` +
           `Puedes revisar su ubicación y ajustarla aquí (24 h):\n${editUrl}`+
-          `*Lo que reportas, importa.*\n\n`
+          `\n\n*Lo que reportas, importa.*`
       );
 
       setUserState(phone, "IDLE");

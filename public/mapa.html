@@ -46,11 +46,6 @@
         border: 1px solid #e2e8f0;
       }
 
-      #toolbar label {
-        font-weight: 500;
-        color: #0f172a;
-      }
-
       #categoriaFilter {
         border-radius: 999px;
         border: 1px solid #cbd5f5;
@@ -76,17 +71,8 @@
         margin-bottom: 6px;
       }
 
-      .popup-detalle {
-        margin: 4px 0;
-      }
-
       .popup-detalle small {
         color: #666;
-      }
-
-      .popup-foto {
-        margin-top: 6px;
-        text-align: center;
       }
 
       .popup-foto img {
@@ -94,13 +80,11 @@
         max-height: 180px;
         border-radius: 8px;
         display: block;
-        margin: 0 auto 6px;
         object-fit: cover;
+        margin: 0 auto 6px;
       }
 
-      /* ==========
-         MARKERS POR CATEGORÍA
-         ========== */
+      /* MARKERS POR CATEGORÍA */
       .custom-marker-wrapper {
         transform: translate(-50%, -50%);
       }
@@ -114,60 +98,29 @@
         justify-content: center;
         font-size: 18px;
         font-weight: 700;
-        color: inherit; /* emoji tal cual viene */
-        border: 1px solid #ffffff;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+
+        /* CONTRASTE MEJORADO */
+        border: 2px solid rgba(0, 0, 0, 0.25) !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
       }
 
-      /* Calles y Carreteras 🚗 – rojo aclarado */
-      .marker-calles {
-        background-color: #ffc7c4;
-      }
-
-      /* Luces y Electricidad 💡 – naranja luz */
-      .marker-luces {
-        background-color: #ffb84a;
-      }
-
-      /* Basura y Residuos ♻️ – verde aclarado */
-      .marker-limpieza {
-        background-color: #cfffd1;
-      }
-
-      /* Agua y Drenaje 💧 – turquesa aclarado */
-      .marker-agua {
-        background-color: #c8ebff;
-      }
-
-      /* Banquetas y Parques 🚶🏽 – azul jean aclarado */
-      .marker-espacio {
-        background-color: #d6e7fb;
-      }
-
-      /* Animales y Fauna 🐾 – sascab aclarado */
-      .marker-fauna {
-        background-color: #e6c9a8;
-      }
-
-      /* Construcción y Obras 🚧 – amarillo obra aclarado */
-      .marker-construccion {
-        background-color: #ffefb3;
-      }
-
-      /* Otro tipo de problema ❓ – gris aclarado */
-      .marker-otro {
-        background-color: #e2e2e5;
-      }
+      .marker-calles { background-color: #FFC7C4; }
+      .marker-luces { background-color: #FFB84A; }
+      .marker-limpieza { background-color: #CFFFD1; }
+      .marker-agua { background-color: #C8EBFF; }
+      .marker-espacio { background-color: #D6E7FB; }
+      .marker-fauna { background-color: #E6C9A8; }
+      .marker-construccion { background-color: #FFEFB3; }
+      .marker-otro { background-color: #E2E2E5; }
     </style>
   </head>
 
   <body>
     <!-- Barra de filtros -->
     <div id="toolbar">
-      <label for="categoriaFilter">Categoría:</label>
+      <label>Categoría:</label>
       <select id="categoriaFilter">
         <option value="">Todas las categorías</option>
-        <!-- opciones dinámicas desde JS -->
       </select>
     </div>
 
@@ -181,28 +134,53 @@
     ></script>
 
     <script>
-      // Vista inicial en Tulum
-      const map = L.map("map").setView([20.214, -87.45], 12);
+      /* =========================
+         CAPAS BASE (OSM + SATÉLITE)
+         ========================= */
 
-      // Capa base OSM
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        maxZoom: 19,
-        attribution:
-          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      }).addTo(map);
+      const capaOSM = L.tileLayer(
+        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        {
+          maxZoom: 19,
+          attribution: "© OpenStreetMap"
+        }
+      );
 
-      // LayerGroup para controlar los markers (para filtros)
+      const capaSatelite = L.tileLayer(
+        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        {
+          maxZoom: 20,
+          attribution: "© Esri"
+        }
+      );
+
+      // Crear mapa con OSM por defecto
+      const map = L.map("map", {
+        center: [20.214, -87.45],
+        zoom: 12,
+        layers: [capaOSM]
+      });
+
+      // Control de capas (solo una satelital como pediste)
+      L.control.layers(
+        {
+          "Mapa estándar": capaOSM,
+          "Satélite": capaSatelite
+        },
+        null,
+        { position: "topright" }
+      ).addTo(map);
+
+      /* =========================
+         SISTEMA DE MARKERS + FILTROS
+         ========================= */
+
       const markersLayer = L.layerGroup().addTo(map);
-
-      // Arrays/objetos globales
       let allReportes = [];
       let markersById = {};
 
-      // ==== Helpers para markers por categoría ====
-
       function getCategoriaKey(nombre) {
         if (!nombre) return "otro";
-
         if (nombre.startsWith("Calles y Carreteras")) return "calles";
         if (nombre.startsWith("Luces y Electricidad")) return "luces";
         if (nombre.startsWith("Limpieza y Basura")) return "limpieza";
@@ -210,13 +188,11 @@
         if (nombre.startsWith("Banquetas y Parques")) return "espacio";
         if (nombre.startsWith("Animales y Fauna")) return "fauna";
         if (nombre.startsWith("Construcción y Obras")) return "construccion";
-
         return "otro";
       }
 
       function getCategoriaEmoji(nombre) {
         if (!nombre) return "📍";
-
         if (nombre.startsWith("Calles y Carreteras")) return "🚗";
         if (nombre.startsWith("Luces y Electricidad")) return "💡";
         if (nombre.startsWith("Limpieza y Basura")) return "♻️";
@@ -224,17 +200,13 @@
         if (nombre.startsWith("Banquetas y Parques")) return "🚶🏽";
         if (nombre.startsWith("Animales y Fauna")) return "🐾";
         if (nombre.startsWith("Construcción y Obras")) return "🚧";
-
         return "📍";
       }
 
-      function createCategoriaIcon(categoria) {
-        const key = getCategoriaKey(categoria);
-        const emoji = getCategoriaEmoji(categoria);
-
+      function createCategoriaIcon(cat) {
         return L.divIcon({
           className: "custom-marker-wrapper",
-          html: `<div class="marker-circle marker-${key}">${emoji}</div>`,
+          html: `<div class="marker-circle marker-${getCategoriaKey(cat)}">${getCategoriaEmoji(cat)}</div>`,
           iconSize: [30, 30],
           iconAnchor: [15, 15],
           popupAnchor: [0, -16],
@@ -249,13 +221,7 @@
 
             ${
               inc.foto_url
-                ? `
-                <div class="popup-foto">
-                  <a href="${inc.foto_url}" target="_blank" rel="noopener noreferrer">
-                    <img src="${inc.foto_url}" alt="Foto del reporte" />
-                  </a>
-                </div>
-              `
+                ? `<div class="popup-foto"><a href="${inc.foto_url}" target="_blank"><img src="${inc.foto_url}" /></a></div>`
                 : ""
             }
 
@@ -267,27 +233,19 @@
 
             ${
               inc.gravedad
-                ? `<div class="popup-detalle"><small>Peligro percibido: ${
-                    inc.gravedad
-                  }/5</small></div>`
+                ? `<div class="popup-detalle"><small>Peligro percibido: ${inc.gravedad}/5</small></div>`
                 : ""
             }
           </div>
         `;
       }
 
-      // Rellena el <select> de categorías en base a los datos
       function populateCategoriaFilter(reportes) {
         const select = document.getElementById("categoriaFilter");
-        const categorias = Array.from(
-          new Set(
-            reportes
-              .map((r) => r.categoria)
-              .filter((c) => typeof c === "string" && c.trim() !== "")
-          )
-        ).sort((a, b) => a.localeCompare(b, "es"));
+        const categorias = [...new Set(reportes.map(r => r.categoria))].sort();
 
-        categorias.forEach((cat) => {
+        categorias.forEach(cat => {
+          if (!cat) return;
           const opt = document.createElement("option");
           opt.value = cat;
           opt.textContent = cat;
@@ -295,68 +253,39 @@
         });
       }
 
-      // Renderiza los markers según el filtro actual
       function renderMarkers() {
         markersLayer.clearLayers();
         markersById = {};
 
-        const categoriaSeleccionada =
-          document.getElementById("categoriaFilter").value;
+        const categoria = document.getElementById("categoriaFilter").value;
         const bounds = [];
 
-        allReportes.forEach((inc) => {
+        allReportes.forEach(inc => {
           if (!inc.lat || !inc.lon) return;
 
-          if (categoriaSeleccionada && inc.categoria !== categoriaSeleccionada) {
-            return;
-          }
+          if (categoria && inc.categoria !== categoria) return;
 
-          const icon = createCategoriaIcon(inc.categoria);
-          const marker = L.marker([inc.lat, inc.lon], { icon }).addTo(
-            markersLayer
-          );
+          const marker = L.marker([inc.lat, inc.lon], {
+            icon: createCategoriaIcon(inc.categoria)
+          }).addTo(markersLayer);
+
           marker.bindPopup(createPopupContent(inc));
-
           markersById[inc.id] = marker;
           bounds.push([inc.lat, inc.lon]);
         });
 
-        if (bounds.length > 0) {
-          map.fitBounds(bounds, { padding: [40, 40] });
-        }
+        if (bounds.length) map.fitBounds(bounds, { padding: [40, 40] });
       }
 
-      // Centrar en un id concreto si viene en query (?i= o ?id=)
-      function focusFromQueryParam() {
-        const params = new URLSearchParams(window.location.search);
-        const targetId = params.get("i") || params.get("id");
-
-        if (targetId && markersById[targetId]) {
-          const m = markersById[targetId];
-          map.setView(m.getLatLng(), 17);
-          m.openPopup();
-        }
-      }
-
-      // Cargar reportes publicados
       fetch("/api/reportes")
-        .then((res) => res.json())
-        .then((reportes) => {
+        .then(res => res.json())
+        .then(reportes => {
           allReportes = reportes || [];
-
           populateCategoriaFilter(allReportes);
           renderMarkers();
-          focusFromQueryParam();
+        });
 
-          // Re-render al cambiar la categoría
-          document
-            .getElementById("categoriaFilter")
-            .addEventListener("change", () => {
-              renderMarkers();
-              // Si tenías un link directo a un id, al cambiar de filtro ya no forzamos el foco
-            });
-        })
-        .catch((err) => console.error("Error cargando reportes:", err));
+      document.getElementById("categoriaFilter").addEventListener("change", renderMarkers);
     </script>
   </body>
 </html>

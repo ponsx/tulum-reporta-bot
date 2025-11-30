@@ -431,7 +431,7 @@ async function handleIncomingMessage(phone, text, location, image) {
         foto_url,
       });
 
-      return sendMessage(phone, "Describe brevemente el problema.");
+      return sendMessage(phone, "Describe brevemente *el problema*.");
     }
 
     case "ESPERANDO_DESCRIPCION": {
@@ -483,7 +483,7 @@ async function handleIncomingMessage(phone, text, location, image) {
 
       return sendMessage(
         phone,
-        "Danos una *referencia visual* (esquina, frente a X, etc.)."
+        "Danos una *referencia visual* (al lado de X, frente a X, etc...)."
       );
     }
 
@@ -560,8 +560,8 @@ async function handleIncomingMessage(phone, text, location, image) {
         phone,
         `✅ Gracias por tu reporte de *${data.categoria}*.\n\n` +
           `Tu reporte pasará por revisión antes de publicarse.\n\n` +
-          `*Lo que reportas, importa.*\n\n` +
-          `Si la ubicación no quedó exacta, puedes ajustarla aquí (24 h):\n${editUrl}`
+          `Puedes revisar su ubicación y ajustarla aquí (24 h):\n${editUrl}`+
+          `*Lo que reportas, importa.*\n\n`
       );
 
       setUserState(phone, "IDLE");
@@ -627,16 +627,19 @@ async function sendMessage(to, text) {
 // NOTIFICACIONES
 // =======================
 
+// =======================
+// NOTIFICACIONES
+// =======================
+
 async function notifyAdminNuevoReporte(reporte, editUrl) {
   if (!ADMIN_PHONE) return;
 
   const texto =
     `🔔 Nuevo reporte pendiente en *Tulum Reporta*.\n\n` +
-    `ID: ${reporte.id}\n` +
     `Categoría: ${reporte.categoria}\n` +
-    `Subcategoría: ${reporte.subcategoria}\n` +
-    `Gravedad: ${reporte.gravedad}\n\n` +
-    `Editar ubicación (24 h):\n${editUrl}\n`;
+    `Subcategoría: ${reporte.subcategoria}\n\n` +
+    `Revísalo en el panel de reportes:\n` +
+    `https://tulum-reporta.appsmith.com/app/tulum-reporta-admin/reportes-6926d7d2c3a22c0862948bae?environment=production`;
 
   await sendMessage(ADMIN_PHONE, texto);
 }
@@ -645,7 +648,10 @@ async function notifyReporterPublicacion(reporte) {
   await sendMessage(
     reporte.phone,
     `✅ Tu reporte de *${reporte.categoria}* fue *publicado*.\n` +
-      `${MAP_BASE_URL}?i=${reporte.id}`
+      `${MAP_BASE_URL}?i=${reporte.id}\n\n` +
+      `Daremos seguimiento con la autoridad, empresa o responsable correspondiente y actualizaremos el estado del reporte cuando haya avances.\n\n` +
+      `De tu lado, puedes compartir este enlace con vecinos o autoridades y consultar el mapa para ver cómo evoluciona.\n\n` +
+      `*Lo que reportas, importa.*`
   );
 }
 
@@ -654,7 +660,9 @@ async function notifyReporterDenegado(reporte, motivo) {
     reporte.phone,
     `❌ Tu reporte de *${reporte.categoria}* fue rechazado.\n` +
       (motivo || "Sin motivo.") +
-      `\nPuedes volver a enviarlo siguiendo las recomendaciones.`
+      `\n\nAhora este reporte no se mostrará en el mapa público.\n` +
+      `Si consideras que el problema persiste o que puedes aportar más información (foto más clara, ubicación más precisa, mejor descripción), puedes volver a enviarlo como un nuevo reporte.\n\n` +
+      `*Lo que reportas, importa.*`
   );
 }
 
@@ -663,7 +671,10 @@ async function notifyReporterAsignado(reporte) {
     reporte.phone,
     `ℹ️ Tu reporte de *${reporte.categoria}* fue *asignado* a un responsable${
       reporte.responsable ? `: *${reporte.responsable}*` : ""
-    }.\nTe avisaremos cuando se marque como resuelto.\n\nLo que reportas, importa.`
+    }.\n` +
+      `Ahora el siguiente paso es que el responsable atienda el problema; cuando se marque como resuelto te lo notificaremos.\n\n` +
+      `De tu lado, puedes seguir revisando el estado desde el mapa y avisarnos si la situación empeora.\n\n` +
+      `Lo que reportas, importa.`
   );
 }
 
@@ -671,9 +682,12 @@ async function notifyReporterResuelto(reporte) {
   await sendMessage(
     reporte.phone,
     `✅ Tu reporte de *${reporte.categoria}* fue marcado como *resuelto*.\n` +
-      `Si el problema continúa, puedes volver a reportarlo.\n\nLo que reportas, importa.`
+      `Ahora consideramos atendido este incidente.\n\n` +
+      `Si el problema continúa o reaparece, puedes volver a reportarlo para que se genere un nuevo seguimiento.\n\n` +
+      `Lo que reportas, importa.`
   );
 }
+
 
 // =======================
 // GUARDAR IMAGEN

@@ -1,0 +1,106 @@
+{
+  "type": "FeatureCollection",
+  "name": "zonas_tulum_ejemplo",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "zona_centro",
+        "nombre": "Centro",
+        "categoria": "urbano",
+        "stroke": "#1f2933",
+        "stroke-width": 2,
+        "stroke-opacity": 1,
+        "fill": "#3b82f6",
+        "fill-opacity": 0.15
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-87.4670, 20.2250],
+            [-87.4550, 20.2250],
+            [-87.4550, 20.2150],
+            [-87.4670, 20.2150],
+            [-87.4670, 20.2250]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "zona_la_veleta",
+        "nombre": "La Veleta",
+        "categoria": "urbano",
+        "stroke": "#92400e",
+        "stroke-width": 2,
+        "stroke-opacity": 1,
+        "fill": "#f97316",
+        "fill-opacity": 0.15
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-87.4800, 20.2050],
+            [-87.4600, 20.2050],
+            [-87.4600, 20.1950],
+            [-87.4800, 20.1950],
+            [-87.4800, 20.2050]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "zona_aldea_zama",
+        "nombre": "Aldea Zama",
+        "categoria": "urbano",
+        "stroke": "#065f46",
+        "stroke-width": 2,
+        "stroke-opacity": 1,
+        "fill": "#22c55e",
+        "fill-opacity": 0.15
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-87.4400, 20.2150],
+            [-87.4300, 20.2150],
+            [-87.4300, 20.2050],
+            [-87.4400, 20.2050],
+            [-87.4400, 20.2150]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "zona_region_15",
+        "nombre": "Región 15",
+        "categoria": "urbano",
+        "stroke": "#4b5563",
+        "stroke-width": 2,
+        "stroke-opacity": 1,
+        "fill": "#a855f7",
+        "fill-opacity": 0.15
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-87.4400, 20.2000],
+            [-87.4200, 20.2000],
+            [-87.4200, 20.1850],
+            [-87.4400, 20.1850],
+            [-87.4400, 20.2000]
+          ]
+        ]
+      }
+    }
+  ]
+}

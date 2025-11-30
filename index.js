@@ -560,8 +560,7 @@ async function handleIncomingMessage(phone, text, location, image) {
       await sendMessage(
         phone,
         `✅ Gracias por tu reporte de *${data.categoria}*.\n\n` +
-          `Lo revisaremos antes de publicarlo,.\n\n` +
-          `Puedes revisar su ubicación y ajustarla aquí (24 h):\n${editUrl}`+
+          `Lo revisaremos antes de publicarlo, mientras, puedes revisar su ubicación y ajustarla aquí _(24 h)_:\n${editUrl}`+
           `\n\n*Lo que reportas, importa.*`
       );
 

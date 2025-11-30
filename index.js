@@ -75,9 +75,9 @@ const CATEGORIES = {
     subcategorias: [
       "Banqueta dañada",
       "Árbol o rama caída",
-      "Vegetación obstruyendo el paso",
+      "Raíz o rama invadiendo",
       "Mobiliario urbano roto",
-      "Parque o área verde dañada",
+      "Area verde descuidada",
       "Estructura en mal estado",
     ],
     subcategoriaOtro: "Otro problema",
@@ -90,7 +90,7 @@ const CATEGORIES = {
       "Tiradero ilegal",
       "Contenedor roto",
       "Animal muerto",
-      "Residuo Peligroso",
+      "Residuo peligroso",
     ],
     subcategoriaOtro: "Otro problema",
   },
@@ -109,7 +109,7 @@ const CATEGORIES = {
   "5": {
     nombre: "Luces y Electricidad 💡",
     subcategorias: [
-      "Luminaria apagada",
+      "Luminaria fallando",
       "Poste dañado",
       "Cables colgando",
       "Transformadores",
@@ -126,7 +126,7 @@ const CATEGORIES = {
       "Nidos en estructuras",
       "Animal herido/agresivo",
       "Animal doméstico suelto",
-      "Plagas y vectores",
+      "Plagas en vía pública",
     ],
     subcategoriaOtro: "Otro problema",
   },

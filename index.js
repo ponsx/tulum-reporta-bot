@@ -354,10 +354,11 @@ async function handleIncomingMessage(phone, text, location, image) {
     categorias.push(`0. ${CATEGORIES["0"].nombre}`);
 
     await sendMessage(
-      phone,
-      "Hola 👋, ¿qué tipo de problema quieres reportar?\n\n" +
-        categorias.join("\n")
-    );
+  phone,
+  "Hola 👋, ¿qué tipo de problema quieres reportar?\n\n" +
+    categorias.join("\n") +
+    "\n\n_ℹ️ Solo atendemos reportes ciudadanos. Si tienes una emergencia, llama al 911._"
+);
     return setUserState(phone, "ESPERANDO_CATEGORIA");
   }
 

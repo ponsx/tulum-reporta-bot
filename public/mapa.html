@@ -83,14 +83,21 @@
         color: #666;
       }
 
-      .popup-foto img {
-        max-width: 240px;
-        max-height: 180px;
-        border-radius: 8px;
-        display: block;
-        object-fit: cover;
-        margin: 0 auto 6px;
-      }
+      .popup-foto {
+          margin-top: 6px;
+          text-align: center;
+        }
+        
+        .popup-foto img {
+          display: block;
+          max-width: 100%;
+          width: 100%;          /* ocupa el ancho disponible del popup */
+          height: auto;
+          max-height: 200px;    /* ajusta a tu gusto */
+          border-radius: 8px;
+          object-fit: cover;
+          margin: 0 auto 6px;
+        }
 
       /* MARKERS POR CATEGORÍA */
       .custom-marker-wrapper {
@@ -118,9 +125,41 @@
       .marker-fauna { background-color: #E6C9A8; }
       .marker-construccion { background-color: #FFEFB3; }
       .marker-otro { background-color: #E2E2E5; }
+
+   /* LIGHTBOX */
+   .lightbox {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.85);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+    }
+    
+    .lightbox.is-visible {
+      display: flex;
+    }
+    
+    #lightbox-img {
+      max-width: 90vw;
+      max-height: 90vh;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+    }
+    
+    /* Opcional: cursor de zoom */
+    .popup-foto img.popup-img {
+      cursor: zoom-in;
+    }
+
     </style>
   </head>
 
+<!-- Lightbox -->
+<div id="lightbox" class="lightbox">
+  <img id="lightbox-img" alt="Foto del reporte ampliada" />
+</div>
   <body>
     <!-- Barra de filtros -->
     <div id="toolbar">
@@ -246,15 +285,19 @@
             <div class="popup-titulo">${inc.categoria || ""}</div>
             <div class="popup-sub">${inc.subcategoria || ""}</div>
 
-            ${
+           ${
               inc.foto_url
                 ? `<div class="popup-foto">
-                    <a href="${inc.foto_url}" target="_blank" rel="noopener noreferrer">
-                      <img src="${inc.foto_url}" />
-                    </a>
+                    <img
+                      src="${inc.foto_url}"
+                      alt="Foto del reporte"
+                      class="popup-img"
+                      data-full="${inc.foto_url}"
+                    />
                   </div>`
                 : ""
             }
+
 
             ${
               inc.descripcion
@@ -346,6 +389,42 @@
         }
       }
 
+
+      // ====== LIGHTBOX PARA FOTOS DEL POPUP ======
+        const lightboxEl = document.getElementById("lightbox");
+        const lightboxImg = document.getElementById("lightbox-img");
+        
+        function abrirLightbox(src) {
+          if (!src) return;
+          lightboxImg.src = src;
+          lightboxEl.classList.add("is-visible");
+        }
+        
+        function cerrarLightbox() {
+          lightboxEl.classList.remove("is-visible");
+          lightboxImg.src = "";
+        }
+        
+        // Click en cualquier imagen dentro del popup
+        document.addEventListener("click", (e) => {
+          const img = e.target.closest(".popup-img");
+          if (!img) return;
+          e.preventDefault();
+          const src = img.dataset.full || img.src;
+          abrirLightbox(src);
+        });
+        
+        // Cerrar al clickar en el fondo
+        lightboxEl.addEventListener("click", cerrarLightbox);
+        
+        // Cerrar con ESC
+        document.addEventListener("keydown", (e) => {
+          if (e.key === "Escape") {
+            cerrarLightbox();
+          }
+        });
+
+
       /* =========================
          GEOMETRÍA CON TURF.JS
          ========================= */
@@ -418,8 +497,32 @@
           const marker = L.marker([inc.lat, inc.lon], {
             icon: createCategoriaIcon(inc.categoria),
           }).addTo(markersLayer);
+          
+          const popupHtml = createPopupContent(inc);
+          marker.bindPopup(popupHtml);
+          
+          // Cuando se abre el popup, si la imagen carga después, reajustamos
+          marker.on("popupopen", (e) => {
+            const popup = e.popup;
+            const popupEl = popup.getElement();
+            if (!popupEl) return;
+          
+            const imgs = popupEl.querySelectorAll("img.popup-img");
+            imgs.forEach((img) => {
+              if (img.complete) {
+                popup.update();
+              } else {
+                img.addEventListener(
+                  "load",
+                  () => {
+                    popup.update();
+                  },
+                  { once: true }
+                );
+              }
+            });
+          });
 
-          marker.bindPopup(createPopupContent(inc));
           markersById[inc.id] = marker;
           bounds.push([inc.lat, inc.lon]);
         });

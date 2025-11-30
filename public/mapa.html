@@ -88,36 +88,44 @@
 
 
 
-  .marker-calles {
-  background-color: #d1d0d0; /* Gris */
+/* Calles y Carreteras 🚗 – emoji rojo → fondo turquesa complementario */
+.marker-calles {
+  background-color: #00CFCF;
 }
 
+/* Luces y Electricidad 💡 – emoji amarillo → fondo azul intenso complementario */
 .marker-luces {
-  background-color: #d1d0d0; /* naranja */
+  background-color: #0050FF;
 }
 
+/* Basura y Residuos ♻️ – emoji verde → fondo magenta complementario */
 .marker-limpieza {
-  background-color: #d1d0d0; /* verde claro */
+  background-color: #D633FF;
 }
 
+/* Agua y Drenaje 💧 – emoji azul → fondo naranja complementario */
 .marker-agua {
-  background-color: #d1d0d0; /* azul claro */
+  background-color: #FF7A33;
 }
 
+/* Banquetas y Parques 🚶🏽 – emoji azul/blanco → fondo coral rojizo complementario */
 .marker-espacio {
-  background-color: #d1d0d0; /* lila claro */
+  background-color: #FF6F5E;
 }
 
+/* Animales y Fauna 🐾 – emoji marrón → fondo azul cielo complementario */
 .marker-fauna {
-  background-color: #d1d0d0; /* verde lima claro */
+  background-color: #4DAAFF;
 }
 
+/* Construcción y Obras 🚧 – emoji amarillo/negro → fondo azul ultramar complementario */
 .marker-construccion {
-  background-color: #d1d0d0; /* arena claro */
+  background-color: #2F3CFF;
 }
 
+/* Otro tipo de problema ❓ – emoji gris/rojo → fondo cyan eléctrico complementario */
 .marker-otro {
-  background-color: #d1d0d0; /* gris claro */
+  background-color: #00D8FF;
 }
 
 </style>
@@ -166,7 +174,7 @@
 
     if (nombre.startsWith("Calles y Carreteras")) return "🚗";
     if (nombre.startsWith("Luces y Electricidad")) return "💡";
-    if (nombre.startsWith("Limpieza y Basura")) return "🗑️";
+    if (nombre.startsWith("Limpieza y Basura")) return "♻️";
     if (nombre.startsWith("Agua y Drenaje")) return "💧";
     if (nombre.startsWith("Banquetas y Parques")) return "🚶🏽";
     if (nombre.startsWith("Animales y Fauna")) return "🐾";

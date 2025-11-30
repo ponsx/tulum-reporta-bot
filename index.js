@@ -119,7 +119,7 @@ const CATEGORIES = {
     subcategoriaOtro: "Otro problema",
   },
   "6": {
-    nombre: "Fauna Salvaje 🐍",
+    nombre: "Animales y Fauna 🐾",
     subcategorias: [
       "Animal salvaje peligroso",
       "Panal de abejas/avispas",

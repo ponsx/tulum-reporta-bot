@@ -99,6 +99,19 @@
           margin: 0 auto 6px;
         }
 
+      /* Ancho fijo para TODOS los popups */
+        .leaflet-popup-content {
+          width: 240px !important;    /* elige tu ancho ideal */
+          max-width: 240px !important;
+        }
+        
+        /* Evita que el texto rompa el diseño */
+        .leaflet-popup-content p,
+        .leaflet-popup-content div {
+          word-wrap: break-word;
+        }
+
+
       /* MARKERS POR CATEGORÍA */
       .custom-marker-wrapper {
         transform: translate(-50%, -50%);

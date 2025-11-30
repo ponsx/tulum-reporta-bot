@@ -1,0 +1,10 @@
+{
+"type": "FeatureCollection",
+"name": "zonas_tulum_ejemplo",
+"features": [
+{ "type": "Feature", "properties": { "id": "zona_centro", "nombre": "Centro", "categoria": "urbano", "stroke": "#1f2933", "stroke-width": 2, "stroke-opacity": 1, "fill": "#3b82f6", "fill-opacity": 0.15 }, "geometry": { "type": "Polygon", "coordinates": [ [ [ -87.467, 20.225 ], [ -87.455, 20.225 ], [ -87.451360848940581, 20.206953488372093 ], [ -87.475204898188181, 20.20540218878249 ], [ -87.467, 20.225 ] ] ] } },
+{ "type": "Feature", "properties": { "id": "zona_la_veleta", "nombre": "La Veleta", "categoria": "urbano", "stroke": "#92400e", "stroke-width": 2, "stroke-opacity": 1, "fill": "#f97316", "fill-opacity": 0.15 }, "geometry": { "type": "Polygon", "coordinates": [ [ [ -87.48, 20.205 ], [ -87.451351409179892, 20.206952742351447 ], [ -87.46, 20.195 ], [ -87.48, 20.195 ], [ -87.48, 20.205 ] ] ] } },
+{ "type": "Feature", "properties": { "id": "zona_aldea_zama", "nombre": "Aldea Zama", "categoria": "urbano", "stroke": "#065f46", "stroke-width": 2, "stroke-opacity": 1, "fill": "#22c55e", "fill-opacity": 0.15 }, "geometry": { "type": "Polygon", "coordinates": [ [ [ -87.455095459063699, 20.224937072503419 ], [ -87.43, 20.215 ], [ -87.43, 20.205 ], [ -87.451356277791575, 20.206967348186481 ], [ -87.455095459063699, 20.224937072503419 ] ] ] } },
+{ "type": "Feature", "properties": { "id": "zona_region_15", "nombre": "RegiÃ³n 15", "categoria": "urbano", "stroke": "#4b5563", "stroke-width": 2, "stroke-opacity": 1, "fill": "#a855f7", "fill-opacity": 0.15 }, "geometry": { "type": "Polygon", "coordinates": [ [ [ -87.451346540568224, 20.206957610963123 ], [ -87.430044843468622, 20.205 ], [ -87.42, 20.185 ], [ -87.469898892687482, 20.181711977060449 ], [ -87.451346540568224, 20.206957610963123 ] ] ] } }
+]
+}

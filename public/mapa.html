@@ -74,17 +74,29 @@
   }
 
   .marker-circle {
-    width: 30px;
-    height: 30px;
-    border-radius: 999px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #ffffff;
-    font-size: 16px;
-    border: 2px solid #ffffff;
-    box-shadow: 0 0 5px rgba(15, 23, 42, 0.35);
-  }
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  /* resaltado del emoji */
+  font-size: 18px;         /* ligeramente más grande */
+  font-weight: 900;        /* más sólido */
+  color: #fff;
+
+  /* borde blanco alrededor del emoji para contraste */
+  text-shadow:
+    -1px -1px 2px #ffffff,
+     1px -1px 2px #ffffff,
+    -1px  1px 2px #ffffff,
+     1px  1px 2px #ffffff;
+
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 6px rgba(15, 23, 42, 0.35);
+}
+
 
   .marker-calles {
     background-color: #ef4444; /* rojo */

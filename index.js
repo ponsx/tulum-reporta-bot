@@ -71,7 +71,7 @@ const CATEGORIES = {
     subcategoriaOtro: "Otro problema",
   },
   "2": {
-    nombre: "Banquetas y Parques 🚶‍♂️",
+    nombre: "Banquetas y Parques 🚶🏽",
     subcategorias: [
       "Banqueta dañada",
       "Árbol o rama caída",
@@ -83,14 +83,14 @@ const CATEGORIES = {
     subcategoriaOtro: "Otro problema",
   },
   "3": {
-    nombre: "Limpieza y Basura 🗑️",
+    nombre: "Basura y Residuos ♻️",
     subcategorias: [
       "Basura acumulada",
       "Escombro suelto",
       "Tiradero ilegal",
       "Contenedor roto",
       "Animal muerto",
-      "Residuo voluminoso",
+      "Residuo Peligroso",
     ],
     subcategoriaOtro: "Otro problema",
   },

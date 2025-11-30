@@ -59,13 +59,13 @@ if (supabaseUrl && supabaseKey) {
 
 const CATEGORIES = {
   "1": {
-    nombre: "Calles y Vehículos 🚗",
+    nombre: "Calles y Carreteras 🚗",
     subcategorias: [
       "Hoyo en la calle",
       "Pavimento dañado",
       "Obstáculo en la vía",
-      "Tope en mal estado",
-      "Registro/tapa suelta",
+      "Topes y reductores",
+      "Zona de accidentes",
       "Señal rota o ausente",
     ],
     subcategoriaOtro: "Otro problema",

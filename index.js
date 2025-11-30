@@ -361,16 +361,27 @@ async function handleIncomingMessage(phone, text, location, image) {
   }
 
   switch (user.state) {
-    case "ESPERANDO_CATEGORIA": {
+        case "ESPERANDO_CATEGORIA": {
       const cat = CATEGORIES[text];
       if (!cat) return sendMessage(phone, "Elige un número válido (0–7)");
 
+      // Si NO tiene subcategorías (caso "0")
+      if (cat.subcategorias.length === 0) {
+        // Guardamos categoría y una subcategoría genérica
+        setUserState(phone, "ESPERANDO_FOTO", {
+          ...user.data,
+          categoria: cat.nombre,
+          subcategoria: "Otro tipo de problema",
+        });
+
+        // Pasamos directamente a pedir la foto
+        return sendMessage(phone, "Envía una *foto* del problema.");
+      }
+
+      // Resto de categorías normales (1–7): pedir subcategoría numérica
       setUserState(phone, "ESPERANDO_SUBCATEGORIA", {
         categoria: cat.nombre,
       });
-
-      if (cat.subcategorias.length === 0)
-        return sendMessage(phone, "Describe brevemente el problema.");
 
       const subMenu = cat.subcategorias
         .map((s, i) => `${i + 1}. ${s}`)
@@ -381,6 +392,8 @@ async function handleIncomingMessage(phone, text, location, image) {
         phone,
         `*${cat.nombre}*\nElige una opción:\n${subMenu}`
       );
+    }
+
     }
 
     case "ESPERANDO_SUBCATEGORIA": {

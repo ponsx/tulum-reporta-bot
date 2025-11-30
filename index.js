@@ -121,10 +121,12 @@ const CATEGORIES = {
   "6": {
     nombre: "Animales y Fauna 🐾",
     subcategorias: [
-      "Animal salvaje peligroso",
+      "Fauna salvaje peligrosa",
       "Panal de abejas/avispas",
+      "Nidos en estructuras",
       "Animal herido/agresivo",
       "Animal doméstico suelto",
+      "Plagas y vectores",
     ],
     subcategoriaOtro: "Otro problema",
   },

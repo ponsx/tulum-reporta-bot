@@ -14,58 +14,111 @@
     />
 
     <style>
-      html,
-      body {
-        margin: 0;
-        padding: 0;
-        height: 100%;
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-          sans-serif;
-      }
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+      sans-serif;
+  }
 
-      #map {
-        width: 100%;
-        height: 100vh;
-      }
+  #map {
+    width: 100%;
+    height: 100vh;
+  }
 
-      .leaflet-popup-content {
-        font-size: 14px;
-      }
+  .leaflet-popup-content {
+    font-size: 14px;
+  }
 
-      .popup-titulo {
-        font-weight: 700;
-        font-size: 15px;
-        margin-bottom: 4px;
-      }
+  .popup-titulo {
+    font-weight: 700;
+    font-size: 15px;
+    margin-bottom: 4px;
+  }
 
-      .popup-sub {
-        color: #475569;
-        font-size: 13px;
-        margin-bottom: 6px;
-      }
+  .popup-sub {
+    color: #475569;
+    font-size: 13px;
+    margin-bottom: 6px;
+  }
 
-      .popup-detalle {
-        margin: 4px 0;
-      }
+  .popup-detalle {
+    margin: 4px 0;
+  }
 
-      .popup-detalle small {
-        color: #666;
-      }
+  .popup-detalle small {
+    color: #666;
+  }
 
-      .popup-foto {
-        margin-top: 6px;
-        text-align: center;
-      }
+  .popup-foto {
+    margin-top: 6px;
+    text-align: center;
+  }
 
-      .popup-foto img {
-        max-width: 240px;
-        max-height: 180px;
-        border-radius: 8px;
-        display: block;
-        margin: 0 auto 6px;
-        object-fit: cover;
-      }
-    </style>
+  .popup-foto img {
+    max-width: 240px;
+    max-height: 180px;
+    border-radius: 8px;
+    display: block;
+    margin: 0 auto 6px;
+    object-fit: cover;
+  }
+
+  /* ==========
+     MARKERS POR CATEGORÍA
+     ========== */
+  .custom-marker-wrapper {
+    transform: translate(-50%, -50%);
+  }
+
+  .marker-circle {
+    width: 30px;
+    height: 30px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    font-size: 16px;
+    border: 2px solid #ffffff;
+    box-shadow: 0 0 5px rgba(15, 23, 42, 0.35);
+  }
+
+  .marker-calles {
+    background-color: #ef4444; /* rojo */
+  }
+
+  .marker-luces {
+    background-color: #f97316; /* naranja */
+  }
+
+  .marker-limpieza {
+    background-color: #22c55e; /* verde */
+  }
+
+  .marker-agua {
+    background-color: #0ea5e9; /* azul claro */
+  }
+
+  .marker-espacio {
+    background-color: #a855f7; /* morado */
+  }
+
+  .marker-fauna {
+    background-color: #65a30d; /* verde oliva */
+  }
+
+  .marker-construccion {
+    background-color: #92400e; /* café */
+  }
+
+  .marker-otro {
+    background-color: #6b7280; /* gris */
+  }
+</style>
+
   </head>
 
   <body>
@@ -79,80 +132,126 @@
     ></script>
 
     <script>
-      // Vista inicial en Tulum
-      const map = L.map("map").setView([20.214, -87.45], 12);
+  // Vista inicial en Tulum
+  const map = L.map("map").setView([20.214, -87.45], 12);
 
-      // Capa base OSM
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        maxZoom: 19,
-        attribution:
-          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      }).addTo(map);
+  // Capa base OSM
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  }).addTo(map);
 
-      // Cargar reportes publicados
-      fetch("/api/reportes")
-        .then((res) => res.json())
-        .then((reportes) => {
-          const markers = {};
-          const bounds = [];
+  // ==== Helpers para markers por categoría ====
 
-          reportes.forEach((inc) => {
-            if (!inc.lat || !inc.lon) return;
+  function getCategoriaKey(nombre) {
+    if (!nombre) return "otro";
 
-            const marker = L.marker([inc.lat, inc.lon]).addTo(map);
+    if (nombre.startsWith("Calles y Vehículos")) return "calles";
+    if (nombre.startsWith("Luces y Electricidad")) return "luces";
+    if (nombre.startsWith("Limpieza y Basura")) return "limpieza";
+    if (nombre.startsWith("Agua y Drenaje")) return "agua";
+    if (nombre.startsWith("Espacio Público")) return "espacio";
+    if (nombre.startsWith("Fauna Salvaje")) return "fauna";
+    if (nombre.startsWith("Construcción y Obras")) return "construccion";
 
-            const popup = `
-              <div>
-                <div class="popup-titulo">${inc.categoria}</div>
-                <div class="popup-sub">${inc.subcategoria || ""}</div>
+    return "otro";
+  }
 
-                ${
-                  inc.foto_url
-                    ? `
-                    <div class="popup-foto">
-                      <a href="${inc.foto_url}" target="_blank" rel="noopener noreferrer">
-                        <img src="${inc.foto_url}" alt="Foto del reporte" />
-                      </a>
-                    </div>
-                    `
-                    : ""
-                }
+  function getCategoriaEmoji(nombre) {
+    if (!nombre) return "📍";
 
-                ${
-                  inc.descripcion
-                    ? `<div class="popup-detalle">${inc.descripcion}</div>`
-                    : ""
-                }
+    if (nombre.startsWith("Calles y Vehículos")) return "🚗";
+    if (nombre.startsWith("Luces y Electricidad")) return "💡";
+    if (nombre.startsWith("Limpieza y Basura")) return "🗑️";
+    if (nombre.startsWith("Agua y Drenaje")) return "💧";
+    if (nombre.startsWith("Espacio Público")) return "🌳";
+    if (nombre.startsWith("Fauna Salvaje")) return "🐍";
+    if (nombre.startsWith("Construcción y Obras")) return "🚧";
 
-                ${
-                  inc.gravedad
-                    ? `<div class="popup-detalle"><small>Peligro percibido: ${inc.gravedad}/5</small></div>`
-                    : ""
-                }
-              </div>
-            `;
+    return "📍";
+  }
 
-            marker.bindPopup(popup);
-            markers[inc.id] = marker;
-            bounds.push([inc.lat, inc.lon]);
-          });
+  function createCategoriaIcon(categoria) {
+    const key = getCategoriaKey(categoria);
+    const emoji = getCategoriaEmoji(categoria);
 
-          // Ajustar vista a todos los marcadores
-          if (bounds.length > 0) {
-            map.fitBounds(bounds, { padding: [40, 40] });
-          }
+    return L.divIcon({
+      className: "custom-marker-wrapper",
+      html: `<div class="marker-circle marker-${key}">${emoji}</div>`,
+      iconSize: [30, 30],
+      iconAnchor: [15, 15],
+      popupAnchor: [0, -16],
+    });
+  }
 
-          // Si viene ?i= o ?id= centrar y abrir el popup
-          const params = new URLSearchParams(window.location.search);
-          const targetId = params.get("i") || params.get("id");
+  // Cargar reportes publicados
+  fetch("/api/reportes")
+    .then((res) => res.json())
+    .then((reportes) => {
+      const markers = {};
+      const bounds = [];
 
-          if (targetId && markers[targetId]) {
-            const m = markers[targetId];
-            map.setView(m.getLatLng(), 17);
-            m.openPopup();
-          }
-        })
-        .catch((err) => console.error("Error cargando reportes:", err));
-    </script>
+      reportes.forEach((inc) => {
+        if (!inc.lat || !inc.lon) return;
+
+        const icon = createCategoriaIcon(inc.categoria);
+
+        const marker = L.marker([inc.lat, inc.lon], { icon }).addTo(map);
+
+        const popup = `
+          <div>
+            <div class="popup-titulo">${inc.categoria}</div>
+            <div class="popup-sub">${inc.subcategoria || ""}</div>
+
+            ${
+              inc.foto_url
+                ? `
+                <div class="popup-foto">
+                  <a href="${inc.foto_url}" target="_blank" rel="noopener noreferrer">
+                    <img src="${inc.foto_url}" alt="Foto del reporte" />
+                  </a>
+                </div>
+                `
+                : ""
+            }
+
+            ${
+              inc.descripcion
+                ? `<div class="popup-detalle">${inc.descripcion}</div>`
+                : ""
+            }
+
+            ${
+              inc.gravedad
+                ? `<div class="popup-detalle"><small>Peligro percibido: ${inc.gravedad}/5</small></div>`
+                : ""
+            }
+          </div>
+        `;
+
+        marker.bindPopup(popup);
+        markers[inc.id] = marker;
+        bounds.push([inc.lat, inc.lon]);
+      });
+
+      // Ajustar vista a todos los marcadores
+      if (bounds.length > 0) {
+        map.fitBounds(bounds, { padding: [40, 40] });
+      }
+
+      // Si viene ?i= o ?id= centrar y abrir el popup
+      const params = new URLSearchParams(window.location.search);
+      const targetId = params.get("i") || params.get("id");
+
+      if (targetId && markers[targetId]) {
+        const m = markers[targetId];
+        map.setView(m.getLatLng(), 17);
+        m.openPopup();
+      }
+    })
+    .catch((err) => console.error("Error cargando reportes:", err));
+</script>
+
   </body>
 </html>

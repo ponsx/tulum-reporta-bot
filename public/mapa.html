@@ -52,6 +52,7 @@
         color: #0f172a;
       }
 
+      #zonaFilter,
       #categoriaFilter,
       #timeFilter {
         border-radius: 999px;
@@ -105,8 +106,6 @@
         justify-content: center;
         font-size: 18px;
         font-weight: 700;
-
-        /* CONTRASTE MEJORADO */
         border: 2px solid rgba(255, 255, 255, 1) !important;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
       }
@@ -125,6 +124,11 @@
   <body>
     <!-- Barra de filtros -->
     <div id="toolbar">
+      <label for="zonaFilter">Zona:</label>
+      <select id="zonaFilter">
+        <option value="">Todas las zonas</option>
+      </select>
+
       <label for="categoriaFilter">Categoría:</label>
       <select id="categoriaFilter">
         <option value="">Todas las categorías</option>
@@ -194,6 +198,7 @@
       const markersLayer = L.layerGroup().addTo(map);
       let allReportes = [];
       let markersById = {};
+      let zonasCollection = null; // GeoJSON de zonas
 
       function getCategoriaKey(nombre) {
         if (!nombre) return "otro";
@@ -230,6 +235,7 @@
       }
 
       function createPopupContent(inc) {
+        const zonaTxt = inc.zonaNombre ? `<div class="popup-detalle"><small>Zona: ${inc.zonaNombre}</small></div>` : "";
         return `
           <div>
             <div class="popup-titulo">${inc.categoria || ""}</div>
@@ -256,6 +262,8 @@
                 ? `<div class="popup-detalle"><small>Peligro percibido: ${inc.gravedad}/5</small></div>`
                 : ""
             }
+
+            ${zonaTxt}
           </div>
         `;
       }
@@ -274,6 +282,29 @@
           const opt = document.createElement("option");
           opt.value = cat;
           opt.textContent = cat;
+          select.appendChild(opt);
+        });
+      }
+
+      function populateZonaFilter(reportes) {
+        const select = document.getElementById("zonaFilter");
+        // limpiar opciones (dejando "Todas")
+        while (select.options.length > 1) {
+          select.remove(1);
+        }
+
+        const zonas = Array.from(
+          new Set(
+            reportes
+              .map((r) => r.zonaNombre)
+              .filter((z) => typeof z === "string" && z.trim() !== "")
+          )
+        ).sort((a, b) => a.localeCompare(b, "es"));
+
+        zonas.forEach((zona) => {
+          const opt = document.createElement("option");
+          opt.value = zona;
+          opt.textContent = zona;
           select.appendChild(opt);
         });
       }
@@ -310,16 +341,114 @@
         }
       }
 
+      /* =========================
+         GEOMETRÍA: POINT IN POLYGON (GeoJSON)
+         ========================= */
+
+      // Algoritmo clásico ray-casting para un anillo de polígono
+      function pointInRing(point, ring) {
+        // point: [lon, lat], ring: [[lon,lat], ...]
+        let inside = false;
+        for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+          const xi = ring[i][0], yi = ring[i][1];
+          const xj = ring[j][0], yj = ring[j][1];
+          const intersect =
+            yi > point[1] !== yj > point[1] &&
+            point[0] <
+              ((xj - xi) * (point[1] - yi)) / (yj - yi + 0.0) + xi;
+          if (intersect) inside = !inside;
+        }
+        return inside;
+      }
+
+      function pointInPolygon(point, geometry) {
+        if (!geometry) return false;
+
+        if (geometry.type === "Polygon") {
+          const rings = geometry.coordinates || [];
+          // exterior ring = 0, holes > 0
+          if (!rings.length) return false;
+          if (!pointInRing(point, rings[0])) return false;
+          // opcional: excluir agujeros
+          for (let i = 1; i < rings.length; i++) {
+            if (pointInRing(point, rings[i])) return false;
+          }
+          return true;
+        }
+
+        if (geometry.type === "MultiPolygon") {
+          const polys = geometry.coordinates || [];
+          for (let p = 0; p < polys.length; p++) {
+            const rings = polys[p];
+            if (!rings.length) continue;
+            if (!pointInRing(point, rings[0])) continue;
+            let inHole = false;
+            for (let i = 1; i < rings.length; i++) {
+              if (pointInRing(point, rings[i])) {
+                inHole = true;
+                break;
+              }
+            }
+            if (!inHole) return true;
+          }
+          return false;
+        }
+
+        return false;
+      }
+
+      // Asignar zona a cada reporte según su lat/lon
+      function asignarZonaAReportes(reportes, zonasGeoJSON) {
+        if (!zonasGeoJSON || !zonasGeoJSON.features) return;
+
+        const features = zonasGeoJSON.features;
+
+        reportes.forEach((inc) => {
+          if (inc.lat == null || inc.lon == null) return;
+
+          const pt = [Number(inc.lon), Number(inc.lat)];
+          let zonaNombre = null;
+          let zonaId = null;
+
+          for (let i = 0; i < features.length; i++) {
+            const f = features[i];
+            const geom = f.geometry;
+            if (!geom) continue;
+
+            if (pointInPolygon(pt, geom)) {
+              zonaNombre =
+                (f.properties && (f.properties.nombre || f.properties.name)) ||
+                `Zona ${i + 1}`;
+              zonaId =
+                (f.properties && (f.properties.id || f.properties.codigo)) ||
+                `zona_${i + 1}`;
+              break;
+            }
+          }
+
+          if (zonaNombre) {
+            inc.zonaNombre = zonaNombre;
+            inc.zonaId = zonaId;
+          }
+        });
+      }
+
       function renderMarkers() {
         markersLayer.clearLayers();
         markersById = {};
 
         const categoria = document.getElementById("categoriaFilter").value;
         const filtroTiempo = document.getElementById("timeFilter").value;
+        const zonaSeleccionada = document.getElementById("zonaFilter").value;
         const bounds = [];
 
         allReportes.forEach((inc) => {
           if (!inc.lat || !inc.lon) return;
+
+          // filtro zona
+          if (zonaSeleccionada && inc.zonaNombre !== zonaSeleccionada) {
+            return;
+          }
 
           // filtro categoría
           if (categoria && inc.categoria !== categoria) return;
@@ -341,15 +470,58 @@
         }
       }
 
-      // Cargar reportes (asegúrate de que /api/reportes incluye created_at)
-      fetch("/api/reportes")
-        .then((res) => res.json())
-        .then((reportes) => {
-          allReportes = reportes || [];
-          populateCategoriaFilter(allReportes);
-          renderMarkers();
+      /* =========================
+         CARGA DE ZONAS + REPORTES
+         ========================= */
+
+      // 1) Intentar cargar GeoJSON de zonas
+      fetch("/data/zonas_tulum_ejemplo.geojson") // ajusta la ruta/nombre si usas otro archivo
+        .then((res) => {
+          if (!res.ok) throw new Error("No se pudo cargar el GeoJSON de zonas");
+          return res.json();
         })
-        .catch((err) => console.error("Error cargando reportes:", err));
+        .then((zonas) => {
+          zonasCollection = zonas;
+
+          // Dibujar zonas en el mapa (opcional pero útil)
+          L.geoJSON(zonasCollection, {
+            style: (feature) => ({
+              color: feature.properties?.stroke || "#111827",
+              weight: feature.properties?.["stroke-width"] || 2,
+              opacity: feature.properties?.["stroke-opacity"] ?? 1,
+              fillColor: feature.properties?.fill || "#3b82f6",
+              fillOpacity: feature.properties?.["fill-opacity"] ?? 0.08,
+            }),
+            onEachFeature: (feature, layer) => {
+              const nombre =
+                feature.properties?.nombre ||
+                feature.properties?.name ||
+                "Zona";
+              layer.bindPopup(`<strong>${nombre}</strong>`);
+            },
+          }).addTo(map);
+        })
+        .catch((err) => {
+          console.warn("No se pudieron cargar zonas:", err);
+        })
+        .finally(() => {
+          // 2) Cargar reportes
+          fetch("/api/reportes")
+            .then((res) => res.json())
+            .then((reportes) => {
+              allReportes = reportes || [];
+
+              // Si hay zonas cargadas, asignarlas a cada reporte
+              if (zonasCollection) {
+                asignarZonaAReportes(allReportes, zonasCollection);
+                populateZonaFilter(allReportes);
+              }
+
+              populateCategoriaFilter(allReportes);
+              renderMarkers();
+            })
+            .catch((err) => console.error("Error cargando reportes:", err));
+        });
 
       // Eventos de filtros
       document
@@ -358,6 +530,10 @@
 
       document
         .getElementById("timeFilter")
+        .addEventListener("change", renderMarkers);
+
+      document
+        .getElementById("zonaFilter")
         .addEventListener("change", renderMarkers);
     </script>
   </body>

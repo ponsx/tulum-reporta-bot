@@ -658,10 +658,9 @@ async function notifyReporterPublicacion(reporte) {
 async function notifyReporterDenegado(reporte, motivo) {
   await sendMessage(
     reporte.phone,
-    `❌ Tu reporte de *${reporte.categoria}* fue rechazado.\n` +
-      (motivo || "Sin motivo.") +
-      `\n\nAhora este reporte no se mostrará en el mapa público.\n` +
-      `Si consideras que el problema persiste o que puedes aportar más información (foto más clara, ubicación más precisa, mejor descripción), puedes volver a enviarlo como un nuevo reporte.\n\n` +
+    `❌ Tu reporte de *${reporte.categoria}* fue rechazado:\n\n` +
+      `*${motivo || "Sin motivo."}*` +
+      `\n\nPor favor revisa nuestras condiciones de uso:\nhttps://www.tulumreporta.com/condiciones.html\n\nCuando estés listo, envía un nuevo reporte con las correcciones.\n\n` +
       `*Lo que reportas, importa.*`
   );
 }

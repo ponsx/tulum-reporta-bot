@@ -660,8 +660,7 @@ async function notifyReporterDenegado(reporte, motivo) {
     reporte.phone,
     `❌ Tu reporte de *${reporte.categoria}* fue rechazado:\n\n` +
       `*${motivo || "Sin motivo."}*` +
-      `\n\nPor favor revisa nuestras condiciones de uso:\nhttps://www.tulumreporta.com/condiciones.html\n\nCuando estés listo, envía un nuevo reporte con las correcciones.\n\n` +
-      `*Lo que reportas, importa.*`
+      `\n\nPor favor revisa nuestras condiciones de uso:\nhttps://www.tulumreporta.com/condiciones.html\n\nCuando estés listo, envía un nuevo reporte con las correcciones.\n\n`
   );
 }
 

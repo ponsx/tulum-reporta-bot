@@ -1,10 +1,287 @@
 {
-"type": "FeatureCollection",
-"name": "zonas_tulum_ejemplo",
-"features": [
-{ "type": "Feature", "properties": { "id": "zona_centro", "nombre": "Centro", "categoria": "urbano", "stroke": "#1f2933", "stroke-width": 2, "stroke-opacity": 1, "fill": "#3b82f6", "fill-opacity": 0.15 }, "geometry": { "type": "Polygon", "coordinates": [ [ [ -87.467, 20.225 ], [ -87.455, 20.225 ], [ -87.451360848940581, 20.206953488372093 ], [ -87.475204898188181, 20.20540218878249 ], [ -87.467, 20.225 ] ] ] } },
-{ "type": "Feature", "properties": { "id": "zona_la_veleta", "nombre": "La Veleta", "categoria": "urbano", "stroke": "#92400e", "stroke-width": 2, "stroke-opacity": 1, "fill": "#f97316", "fill-opacity": 0.15 }, "geometry": { "type": "Polygon", "coordinates": [ [ [ -87.48, 20.205 ], [ -87.451351409179892, 20.206952742351447 ], [ -87.46, 20.195 ], [ -87.48, 20.195 ], [ -87.48, 20.205 ] ] ] } },
-{ "type": "Feature", "properties": { "id": "zona_aldea_zama", "nombre": "Aldea Zama", "categoria": "urbano", "stroke": "#065f46", "stroke-width": 2, "stroke-opacity": 1, "fill": "#22c55e", "fill-opacity": 0.15 }, "geometry": { "type": "Polygon", "coordinates": [ [ [ -87.455095459063699, 20.224937072503419 ], [ -87.43, 20.215 ], [ -87.43, 20.205 ], [ -87.451356277791575, 20.206967348186481 ], [ -87.455095459063699, 20.224937072503419 ] ] ] } },
-{ "type": "Feature", "properties": { "id": "zona_region_15", "nombre": "RegiÃ³n 15", "categoria": "urbano", "stroke": "#4b5563", "stroke-width": 2, "stroke-opacity": 1, "fill": "#a855f7", "fill-opacity": 0.15 }, "geometry": { "type": "Polygon", "coordinates": [ [ [ -87.451346540568224, 20.206957610963123 ], [ -87.430044843468622, 20.205 ], [ -87.42, 20.185 ], [ -87.469898892687482, 20.181711977060449 ], [ -87.451346540568224, 20.206957610963123 ] ] ] } }
-]
+  "type": "FeatureCollection",
+  "name": "zonas_tulum",
+  "features": [
+
+    /* ===========================
+       EJIDOS (5)
+    ============================ */
+
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "ejido_tulum",
+        "nombre": "Ejido Tulum",
+        "tipo": "ejido",
+        "fuente": "RAN"
+      },
+      "geometry": null
+    },
+
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "ejido_jacinto_pat",
+        "nombre": "Ejido Jacinto Pat",
+        "tipo": "ejido",
+        "fuente": "RAN"
+      },
+      "geometry": null
+    },
+
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "ejido_chunyaxche",
+        "nombre": "Ejido Chunyaxché",
+        "tipo": "ejido",
+        "fuente": "RAN"
+      },
+      "geometry": null
+    },
+
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "ejido_francisco_uh_may",
+        "nombre": "Ejido Francisco Uh May",
+        "tipo": "ejido",
+        "fuente": "RAN"
+      },
+      "geometry": null
+    },
+
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "ejido_manuel_antonio_ay",
+        "nombre": "Ejido Manuel Antonio Ay",
+        "tipo": "ejido",
+        "fuente": "RAN"
+      },
+      "geometry": null
+    },
+
+
+
+    /* ===========================
+       POBLACIONES / LOCALIDADES (9)
+    ============================ */
+
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "tulum_pueblo",
+        "nombre": "Tulum",
+        "tipo": "poblacion",
+        "fuente": "INEGI_localidades"
+      },
+      "geometry": null
+    },
+
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "akumal",
+        "nombre": "Akumal",
+        "tipo": "poblacion",
+        "fuente": "INEGI_localidades"
+      },
+      "geometry": null
+    },
+
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "chemuyil",
+        "nombre": "Chemuyil",
+        "tipo": "poblacion",
+        "fuente": "INEGI_localidades"
+      },
+      "geometry": null
+    },
+
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "coba",
+        "nombre": "Cobá",
+        "tipo": "poblacion",
+        "fuente": "INEGI_localidades"
+      },
+      "geometry": null
+    },
+
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "punta_allen",
+        "nombre": "Punta Allen",
+        "tipo": "poblacion",
+        "fuente": "INEGI_localidades"
+      },
+      "geometry": null
+    },
+
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "macario_gomez",
+        "nombre": "Macario Gómez",
+        "tipo": "poblacion",
+        "fuente": "INEGI_localidades"
+      },
+      "geometry": null
+    },
+
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "francisco_uh_may_localidad",
+        "nombre": "Francisco Uh May (localidad)",
+        "tipo": "poblacion",
+        "fuente": "INEGI_localidades"
+      },
+      "geometry": null
+    },
+
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "manuel_antonio_ay_localidad",
+        "nombre": "Manuel Antonio Ay (localidad)",
+        "tipo": "poblacion",
+        "fuente": "INEGI_localidades"
+      },
+      "geometry": null
+    },
+
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "javier_rojo_gomez",
+        "nombre": "Javier Rojo Gómez",
+        "tipo": "poblacion",
+        "fuente": "INEGI_localidades"
+      },
+      "geometry": null
+    },
+
+
+
+    /* ===========================
+       BARRIOS URBANOS TULUM PUEBLO (10)
+    ============================ */
+
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "centro",
+        "nombre": "Centro",
+        "tipo": "barrio",
+        "fuente": "AGEB_INEGI"
+      },
+      "geometry": null
+    },
+
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "la_veleta",
+        "nombre": "La Veleta",
+        "tipo": "barrio",
+        "fuente": "AGEB_INEGI"
+      },
+      "geometry": null
+    },
+
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "aldea_zama",
+        "nombre": "Aldea Zama",
+        "tipo": "barrio",
+        "fuente": "AGEB_INEGI"
+      },
+      "geometry": null
+    },
+
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "region_15",
+        "nombre": "Región 15",
+        "tipo": "barrio",
+        "fuente": "AGEB_INEGI"
+      },
+      "geometry": null
+    },
+
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "region_8",
+        "nombre": "Región 8",
+        "tipo": "barrio",
+        "fuente": "AGEB_INEGI"
+      },
+      "geometry": null
+    },
+
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "tumben_ka",
+        "nombre": "Colonia Tumben Ka",
+        "tipo": "barrio",
+        "fuente": "AGEB_INEGI"
+      },
+      "geometry": null
+    },
+
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "mayapax",
+        "nombre": "Colonia Mayapax",
+        "tipo": "barrio",
+        "fuente": "AGEB_INEGI"
+      },
+      "geometry": null
+    },
+
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "guerra_de_castas",
+        "nombre": "Guerra de Castas",
+        "tipo": "barrio",
+        "fuente": "AGEB_INEGI"
+      },
+      "geometry": null
+    },
+
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "huracanes",
+        "nombre": "Huracanes",
+        "tipo": "barrio",
+        "fuente": "AGEB_INEGI"
+      },
+      "geometry": null
+    },
+
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "villas_tulum",
+        "nombre": "Villas Tulum",
+        "tipo": "barrio",
+        "fuente": "AGEB_INEGI"
+      },
+      "geometry": null
+    }
+
+  ]
 }

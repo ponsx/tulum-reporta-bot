@@ -25,9 +25,9 @@ app.use(express.json());
 
 // URL públicas
 const MAP_BASE_URL =
-  process.env.PUBLIC_MAP_BASE_URL || "https://www.tulumreporta.com/mapa";
+  process.env.PUBLIC_MAP_BASE_URL || "https://bot.tulumreporta.com/mapa";
 const PUBLIC_BASE_URL =
-  process.env.PUBLIC_BASE_URL || "https://www.tulumreporta.com";
+  process.env.PUBLIC_BASE_URL || "https://bot.tulumreporta.com";
 
 // Token edición
 const EDIT_TOKEN_SECRET =

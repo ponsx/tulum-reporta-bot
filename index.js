@@ -315,9 +315,16 @@ app.get("/mapa", (req, res) => {
 // =======================
 
 app.get("/webhook", (req, res) => {
+  const mode = req.query["hub.mode"];
+  const token = req.query["hub.verify_token"];
   const challenge = req.query["hub.challenge"];
-  if (challenge) return res.send(challenge);
-  return res.send("ok");
+  const verifyToken = process.env.VERIFY_TOKEN;
+
+  if (mode === "subscribe" && token === verifyToken) {
+    return res.status(200).send(challenge);
+  } else {
+    return res.sendStatus(403);
+  }
 });
 
 app.post("/webhook", async (req, res) => {

@@ -29,17 +29,27 @@ const MAP_BASE_URL =
 const PUBLIC_BASE_URL =
   process.env.PUBLIC_BASE_URL || "https://bot.tulumreporta.com";
 
-// Token edición
-const EDIT_TOKEN_SECRET =
-  process.env.EDIT_TOKEN_SECRET || "CAMBIA_ESTE_SECRET_EN_PROD";
-const EDIT_TOKEN_EXP_SECONDS = 60 * 60 * 24;
+// Token de edición (PRODUCCIÓN)
+const EDIT_TOKEN_SECRET = process.env.EDIT_TOKEN_SECRET;
+
+if (!EDIT_TOKEN_SECRET) {
+  console.error("Falta EDIT_TOKEN_SECRET en las variables de entorno.");
+  process.exit(1);
+}
+
+const EDIT_TOKEN_EXP_SECONDS = 60 * 60 * 24; // 24 horas
+
 
 // Admin
 const ADMIN_PHONE = process.env.ADMIN_PHONE || null;
 const ADMIN_MOD_TOKEN = process.env.ADMIN_MOD_TOKEN || null;
 
-// Verify token para webhook de WhatsApp
-const WEBHOOK_VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || "tulum-reporta-debug";
+// Verify token para webhook de WhatsApp (PRODUCCIÓN)
+const WEBHOOK_VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN;
+if (!WEBHOOK_VERIFY_TOKEN) {
+  console.error("Falta WHATSAPP_VERIFY_TOKEN en las variables de entorno.");
+  process.exit(1);
+}
 
 
 // =======================
@@ -323,43 +333,44 @@ app.get("/webhook", (req, res) => {
   const token = req.query["hub.verify_token"];
   const challenge = req.query["hub.challenge"];
 
-  console.log("GET /webhook query:", req.query, "EXPECTED:", WEBHOOK_VERIFY_TOKEN);
-
-  // Si entras sin parámetros (navegador), responde algo simple
-  if (!mode && !token && !challenge) {
-    return res.status(200).send("Webhook Tulum Reporta OK");
-  }
-
   if (mode === "subscribe" && token === WEBHOOK_VERIFY_TOKEN) {
     return res.status(200).send(challenge);
-  } else {
-    return res.sendStatus(403);
   }
+
+  // Para cualquier otra cosa (incluido abrirlo en el navegador): 403
+  return res.sendStatus(403);
 });
+
 
 
 app.post("/webhook", async (req, res) => {
-  console.log(
-    "POST /webhook body:",
-    JSON.stringify(req.body || {}, null, 2)
-  );
+  try {
+    const entry = req.body.entry?.[0];
+    const changes = entry?.changes?.[0];
+    const value = changes?.value;
 
-  const entry = req.body.entry?.[0];
-  const changes = entry?.changes?.[0];
-  const messages = changes?.value?.messages;
+    const messages = value?.messages;
 
-  if (messages?.length > 0) {
-    const msg = messages[0];
-    await handleIncomingMessage(
-      msg.from,
-      msg.text?.body?.trim() || "",
-      msg.location || null,
-      msg.image || null
-    );
+    // Mensajes entrantes del usuario
+    if (messages?.length > 0) {
+      const msg = messages[0];
+
+      await handleIncomingMessage(
+        msg.from,
+        msg.text?.body?.trim() || "",
+        msg.location || null,
+        msg.image || null
+      );
+    }
+
+    // Ignoramos silenciosamente statuses, etc. en prod
+    return res.sendStatus(200);
+  } catch (e) {
+    console.error("Error procesando /webhook:", e);
+    return res.sendStatus(500);
   }
-
-  res.sendStatus(200);
 });
+
 
 // =======================
 // BOT LOGIC

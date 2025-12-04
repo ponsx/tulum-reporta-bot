@@ -1,5 +1,5 @@
 // ===========================================================
-// index.js — Versión limpia, final y alineada a tu nueva BD
+// index.js — Versión limpia, final y alineada a tu última versión
 // ===========================================================
 
 import { createClient } from "@supabase/supabase-js";
@@ -37,6 +37,10 @@ const EDIT_TOKEN_EXP_SECONDS = 60 * 60 * 24;
 // Admin
 const ADMIN_PHONE = process.env.ADMIN_PHONE || null;
 const ADMIN_MOD_TOKEN = process.env.ADMIN_MOD_TOKEN || null;
+
+// Verify token para webhook de WhatsApp
+const WEBHOOK_VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || "tulum-reporta-debug";
+
 
 // =======================
 // SUPABASE
@@ -318,16 +322,28 @@ app.get("/webhook", (req, res) => {
   const mode = req.query["hub.mode"];
   const token = req.query["hub.verify_token"];
   const challenge = req.query["hub.challenge"];
-  const verifyToken = process.env.VERIFY_TOKEN;
 
-  if (mode === "subscribe" && token === verifyToken) {
+  console.log("GET /webhook query:", req.query, "EXPECTED:", WEBHOOK_VERIFY_TOKEN);
+
+  // Si entras sin parámetros (navegador), responde algo simple
+  if (!mode && !token && !challenge) {
+    return res.status(200).send("Webhook Tulum Reporta OK");
+  }
+
+  if (mode === "subscribe" && token === WEBHOOK_VERIFY_TOKEN) {
     return res.status(200).send(challenge);
   } else {
     return res.sendStatus(403);
   }
 });
 
+
 app.post("/webhook", async (req, res) => {
+  console.log(
+    "POST /webhook body:",
+    JSON.stringify(req.body || {}, null, 2)
+  );
+
   const entry = req.body.entry?.[0];
   const changes = entry?.changes?.[0];
   const messages = changes?.value?.messages;
@@ -361,11 +377,11 @@ async function handleIncomingMessage(phone, text, location, image) {
     categorias.push(`0. ${CATEGORIES["0"].nombre}`);
 
     await sendMessage(
-  phone,
-  "Hola 👋, ¿qué tipo de problema quieres reportar?\n\n" +
-    categorias.join("\n") +
-    "\n\n_ℹ️ Solo atendemos reportes ciudadanos. Si tienes una emergencia, llama al 911._"
-);
+      phone,
+      "Hola 👋, ¿qué tipo de problema quieres reportar?\n\n" +
+        categorias.join("\n") +
+        "\n\n_ℹ️ Solo atendemos reportes ciudadanos. Si tienes una emergencia, llama al 911._"
+    );
     return setUserState(phone, "ESPERANDO_CATEGORIA");
   }
 
@@ -374,8 +390,6 @@ async function handleIncomingMessage(phone, text, location, image) {
       const cat = CATEGORIES[text];
       if (!cat) return sendMessage(phone, "Elige un número válido (0–7)");
 
-      // Si la categoría no tiene subcategorías (caso "0"),
-      // saltamos directamente a pedir foto y usamos una subcategoría genérica.
       if (cat.subcategorias.length === 0) {
         setUserState(phone, "ESPERANDO_FOTO", {
           ...user.data,
@@ -386,7 +400,6 @@ async function handleIncomingMessage(phone, text, location, image) {
         return sendMessage(phone, "Envía una *foto* del problema.");
       }
 
-      // Resto de categorías: pedir subcategoría numérica
       setUserState(phone, "ESPERANDO_SUBCATEGORIA", {
         categoria: cat.nombre,
       });
@@ -567,7 +580,7 @@ async function handleIncomingMessage(phone, text, location, image) {
       await sendMessage(
         phone,
         `✅ Gracias por tu reporte de *${data.categoria}*.\n\n` +
-          `Lo revisaremos antes de publicarlo, mientras, puedes revisar su ubicación y ajustarla aquí _(24 h)_:\n${editUrl}`+
+          `Lo revisaremos antes de publicarlo, mientras, puedes revisar su ubicación y ajustarla aquí _(24 h)_:\n${editUrl}` +
           `\n\n*Lo que reportas, importa.*`
       );
 
@@ -634,10 +647,6 @@ async function sendMessage(to, text) {
 // NOTIFICACIONES
 // =======================
 
-// =======================
-// NOTIFICACIONES
-// =======================
-
 async function notifyAdminNuevoReporte(reporte, editUrl) {
   if (!ADMIN_PHONE) return;
 
@@ -692,7 +701,6 @@ async function notifyReporterResuelto(reporte) {
       `Lo que reportas, importa.`
   );
 }
-
 
 // =======================
 // GUARDAR IMAGEN

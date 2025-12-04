@@ -391,7 +391,7 @@ async function handleIncomingMessage(phone, text, location, image) {
       phone,
       "Hola 👋, ¿qué tipo de problema quieres reportar?\n\n" +
         categorias.join("\n") +
-        "\n\n_ℹ️ Solo atendemos reportes ciudadanos. Si tienes una emergencia, llama al 911._"
+        "\n\n_ℹ️ Sólo reportes ciudadanos. Si tienes una emergencia, llama al 911._"
     );
     return setUserState(phone, "ESPERANDO_CATEGORIA");
   }
@@ -476,7 +476,7 @@ async function handleIncomingMessage(phone, text, location, image) {
 
       return sendMessage(
         phone,
-        "Indica la *ubicación*: ubicación de WhatsApp o dirección completa _(Calle, número y colonia o población)_."
+        "Comparte la ubicación o escribe la dirección _(Calle, número y colonia o población)_."
       );
     }
 

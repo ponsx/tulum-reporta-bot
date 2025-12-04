@@ -408,7 +408,7 @@ async function handleIncomingMessage(phone, text, location, image) {
           subcategoria: "Otro tipo de problema",
         });
 
-        return sendMessage(phone, "Envía una *foto* del problema.");
+        return sendMessage(phone, "Envía una *foto del problema*.");
       }
 
       setUserState(phone, "ESPERANDO_SUBCATEGORIA", {
@@ -442,7 +442,7 @@ async function handleIncomingMessage(phone, text, location, image) {
       }
 
       setUserState(phone, "ESPERANDO_FOTO", { ...user.data, subcategoria: sub });
-      return sendMessage(phone, "Envía una *foto* del problema.");
+      return sendMessage(phone, "Envía una *foto del problema*.");
     }
 
     case "ESPERANDO_FOTO": {
@@ -463,11 +463,11 @@ async function handleIncomingMessage(phone, text, location, image) {
         foto_url,
       });
 
-      return sendMessage(phone, "Describe brevemente *el problema*.");
+      return sendMessage(phone, "¿*Qué* lo causa y *cómo* afecta?.");
     }
 
     case "ESPERANDO_DESCRIPCION": {
-      if (!text) return sendMessage(phone, "Escribe la descripción.");
+      if (!text) return sendMessage(phone, "Indica qué origina el problema y cómo está afectando a la población o al espacio público.");
 
       setUserState(phone, "ESPERANDO_UBICACION", {
         ...user.data,
@@ -476,7 +476,7 @@ async function handleIncomingMessage(phone, text, location, image) {
 
       return sendMessage(
         phone,
-        "Comparte la ubicación o escribe la dirección _(Calle, número y colonia o población)_."
+        "Envía la ubicación o escribe la dirección donde está el problema."
       );
     }
 

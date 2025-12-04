@@ -476,7 +476,7 @@ async function handleIncomingMessage(phone, text, location, image) {
 
       return sendMessage(
         phone,
-        "Envía la ubicación o escribe la dirección donde está el problema."
+        "Envía *la ubicación* o escribe *la dirección* donde está el problema."
       );
     }
 
@@ -515,7 +515,7 @@ async function handleIncomingMessage(phone, text, location, image) {
 
       return sendMessage(
         phone,
-        "Danos una *referencia visual* (al lado de X, frente a X, etc...)."
+        "Dános una *referencia visual* (al lado de X, frente a X, etc...)."
       );
     }
 

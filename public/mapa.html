@@ -445,47 +445,50 @@
          GEOMETRÍA CON TURF.JS
          ========================= */
 
-      // Asignar zona a cada reporte según su lat/lon usando Turf
-      function asignarZonaAReportes(reportes, zonasGeoJSON) {
-        if (!zonasGeoJSON || !zonasGeoJSON.features) return;
+     // Asignar zona (en realidad: LOCALIDAD) a cada reporte según lat/lon
+function asignarZonaAReportes(reportes, zonasGeoJSON) {
+  if (!zonasGeoJSON || !zonasGeoJSON.features) return;
 
-        const features = zonasGeoJSON.features;
+  // Nos quedamos SOLO con las LOCALIDADES
+  const features = zonasGeoJSON.features.filter((f) => {
+    return (
+      f.properties &&
+      typeof f.properties.nivel === "string" &&
+      f.properties.nivel.toLowerCase() === "localidad"
+    );
+  });
 
-        reportes.forEach((inc) => {
-          if (inc.lat == null || inc.lon == null) return;
+  reportes.forEach((inc) => {
+    if (inc.lat == null || inc.lon == null) return;
 
-          const lon = Number(inc.lon);
-          const lat = Number(inc.lat);
-          if (Number.isNaN(lon) || Number.isNaN(lat)) return;
+    const lon = Number(inc.lon);
+    const lat = Number(inc.lat);
+    if (Number.isNaN(lon) || Number.isNaN(lat)) return;
 
-          const punto = turf.point([lon, lat]);
+    const punto = turf.point([lon, lat]);
 
-          let zonaNombre = null;
-          let zonaId = null;
+    let zonaNombre = null;
+    let zonaId = null;
 
-          for (let i = 0; i < features.length; i++) {
-            const f = features[i];
-            if (!f.geometry) continue;
+    for (let i = 0; i < features.length; i++) {
+      const f = features[i];
+      if (!f.geometry) continue;
 
-            if (turf.booleanPointInPolygon(punto, f)) {
-              zonaNombre =
-                (f.properties &&
-                  (f.properties.nombre || f.properties.name)) ||
-                `Zona ${i + 1}`;
-              zonaId =
-                (f.properties &&
-                  (f.properties.id || f.properties.codigo)) ||
-                `zona_${i + 1}`;
-              break;
-            }
-          }
-
-          if (zonaNombre) {
-            inc.zonaNombre = zonaNombre;
-            inc.zonaId = zonaId;
-          }
-        });
+      if (turf.booleanPointInPolygon(punto, f)) {
+        const props = f.properties || {};
+        zonaNombre = props.nombre || props.name || `Zona ${i + 1}`;
+        zonaId = props.id || props.codigo || `zona_${i + 1}`;
+        break; // primera localidad que contenga el punto
       }
+    }
+
+    if (zonaNombre) {
+      inc.zonaNombre = zonaNombre;
+      inc.zonaId = zonaId;
+    }
+  });
+}
+
 
       function renderMarkers() {
         markersLayer.clearLayers();

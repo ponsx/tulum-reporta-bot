@@ -5,71 +5,24 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "tulum_pueblo",
-        "nombre": "Tulum Pueblo",
-        "nivel": "zona",
-        "tipo_zona": "urbano",
+        "id": "tulum_municipio",
+        "nombre": "Municipio de Tulum",
+        "nivel": "municipio",
+        "tipo_zona": "municipio",
         "zona_id": null,
         "localidad_id": null
       },
       "geometry": null
     },
+
     {
       "type": "Feature",
       "properties": {
-        "id": "corredor_tulum_akumal",
-        "nombre": "Corredor Tulum–Akumal (Riviera Norte)",
+        "id": "tulum",
+        "nombre": "Tulum",
         "nivel": "zona",
-        "tipo_zona": "corredor",
-        "zona_id": null,
-        "localidad_id": null
-      },
-      "geometry": null
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "id": "corredor_tulum_coba",
-        "nombre": "Corredor Tulum–Cobá",
-        "nivel": "zona",
-        "tipo_zona": "corredor",
-        "zona_id": null,
-        "localidad_id": null
-      },
-      "geometry": null
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "id": "corredor_tulum_felipe_sur",
-        "nombre": "Corredor Tulum–Felipe Carrillo P. (Sur)",
-        "nivel": "zona",
-        "tipo_zona": "corredor",
-        "zona_id": null,
-        "localidad_id": null
-      },
-      "geometry": null
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "id": "zona_hotelera_norte",
-        "nombre": "Zona Hotelera Norte",
-        "nivel": "zona",
-        "tipo_zona": "costa",
-        "zona_id": null,
-        "localidad_id": null
-      },
-      "geometry": null
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "id": "zona_hotelera_sur",
-        "nombre": "Zona Hotelera Sur",
-        "nivel": "zona",
-        "tipo_zona": "costa",
-        "zona_id": null,
+        "tipo_zona": "urbano_costa",
+        "zona_id": "tulum_municipio",
         "localidad_id": null
       },
       "geometry": null
@@ -81,7 +34,7 @@
         "nombre": "Sian Ka’an – Punta Allen",
         "nivel": "zona",
         "tipo_zona": "costa",
-        "zona_id": null,
+        "zona_id": "tulum_municipio",
         "localidad_id": null
       },
       "geometry": null
@@ -89,11 +42,11 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "ejido_tulum",
-        "nombre": "Ejido Tulum",
+        "id": "corredor_tulum_akumal",
+        "nombre": "Corredor Tulum–Akumal (Riviera Norte)",
         "nivel": "zona",
-        "tipo_zona": "ejido",
-        "zona_id": null,
+        "tipo_zona": "corredor",
+        "zona_id": "tulum_municipio",
         "localidad_id": null
       },
       "geometry": null
@@ -101,11 +54,11 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "ejido_jacinto_pat",
-        "nombre": "Ejido Jacinto Pat",
+        "id": "corredor_tulum_coba",
+        "nombre": "Corredor Tulum–Cobá",
         "nivel": "zona",
-        "tipo_zona": "ejido",
-        "zona_id": null,
+        "tipo_zona": "corredor",
+        "zona_id": "tulum_municipio",
         "localidad_id": null
       },
       "geometry": null
@@ -113,35 +66,11 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "ejido_chunyaxche",
-        "nombre": "Ejido Chunyaxché",
+        "id": "corredor_tulum_felipe_sur",
+        "nombre": "Corredor Tulum–Felipe Carrillo P. (Sur)",
         "nivel": "zona",
-        "tipo_zona": "ejido",
-        "zona_id": null,
-        "localidad_id": null
-      },
-      "geometry": null
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "id": "ejido_francisco_uh_may",
-        "nombre": "Ejido Francisco Uh May",
-        "nivel": "zona",
-        "tipo_zona": "ejido",
-        "zona_id": null,
-        "localidad_id": null
-      },
-      "geometry": null
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "id": "ejido_manuel_antonio_ay",
-        "nombre": "Ejido Manuel Antonio Ay",
-        "nivel": "zona",
-        "tipo_zona": "ejido",
-        "zona_id": null,
+        "tipo_zona": "corredor",
+        "zona_id": "tulum_municipio",
         "localidad_id": null
       },
       "geometry": null
@@ -150,108 +79,60 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "anp_parque_del_jaguar",
-        "nombre": "ANP Parque del Jaguar",
-        "nivel": "zona",
-        "tipo_zona": "anp",
-        "zona_id": null,
-        "localidad_id": null
-      },
-      "geometry": null
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "id": "anp_parque_nacional_tulum",
-        "nombre": "ANP Parque Nacional Tulum",
-        "nivel": "zona",
-        "tipo_zona": "anp",
-        "zona_id": null,
-        "localidad_id": null
-      },
-      "geometry": null
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "id": "anp_sian_kaan",
-        "nombre": "ANP Sian Ka’an",
-        "nivel": "zona",
-        "tipo_zona": "anp",
-        "zona_id": null,
-        "localidad_id": null
-      },
-      "geometry": null
-    },
-
-    {
-      "type": "Feature",
-      "properties": {
-        "id": "federal_307_norte",
-        "nombre": "Carretera Federal 307 – Tramo Norte Tulum–Akumal",
-        "nivel": "zona",
-        "tipo_zona": "carretera_federal",
-        "zona_id": "corredor_tulum_akumal",
-        "localidad_id": null
-      },
-      "geometry": null
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "id": "federal_307_sur",
-        "nombre": "Carretera Federal 307 – Tramo Sur Tulum–Felipe C. P.",
-        "nivel": "zona",
-        "tipo_zona": "carretera_federal",
-        "zona_id": "corredor_tulum_felipe_sur",
-        "localidad_id": null
-      },
-      "geometry": null
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "id": "carretera_109",
-        "nombre": "Carretera 109 Tulum–Cobá",
-        "nivel": "zona",
-        "tipo_zona": "carretera_federal",
-        "zona_id": "corredor_tulum_coba",
-        "localidad_id": null
-      },
-      "geometry": null
-    },
-
-    {
-      "type": "Feature",
-      "properties": {
-        "id": "tulum",
-        "nombre": "Tulum",
+        "id": "tulum_pueblo",
+        "nombre": "Tulum Pueblo",
         "nivel": "localidad",
-        "tipo_zona": "localidad",
-        "zona_id": "tulum_pueblo",
+        "tipo_zona": "localidad_urbana",
+        "zona_id": "tulum",
         "localidad_id": null
       },
       "geometry": null
     },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "tulum_zona_hotelera",
+        "nombre": "Zona Hotelera de Tulum",
+        "nivel": "localidad",
+        "tipo_zona": "localidad_costera",
+        "zona_id": "tulum",
+        "localidad_id": null
+      },
+      "geometry": null
+    },
+
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "punta_allen",
+        "nombre": "Punta Allen",
+        "nivel": "localidad",
+        "tipo_zona": "localidad_costera",
+        "zona_id": "sian_kaan_punta_allen",
+        "localidad_id": null
+      },
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "javier_rojo_gomez",
+        "nombre": "Javier Rojo Gómez",
+        "nivel": "localidad",
+        "tipo_zona": "localidad_rural",
+        "zona_id": "sian_kaan_punta_allen",
+        "localidad_id": null
+      },
+      "geometry": null
+    },
+
     {
       "type": "Feature",
       "properties": {
         "id": "akumal",
         "nombre": "Akumal",
         "nivel": "localidad",
-        "tipo_zona": "localidad",
-        "zona_id": "corredor_tulum_akumal",
-        "localidad_id": null
-      },
-      "geometry": null
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "id": "akumal_pueblo",
-        "nombre": "Akumal Pueblo",
-        "nivel": "localidad",
-        "tipo_zona": "localidad",
+        "tipo_zona": "localidad_costera",
         "zona_id": "corredor_tulum_akumal",
         "localidad_id": null
       },
@@ -263,19 +144,20 @@
         "id": "chemuyil",
         "nombre": "Chemuyil",
         "nivel": "localidad",
-        "tipo_zona": "localidad",
+        "tipo_zona": "localidad_rural",
         "zona_id": "corredor_tulum_akumal",
         "localidad_id": null
       },
       "geometry": null
     },
+
     {
       "type": "Feature",
       "properties": {
         "id": "coba",
         "nombre": "Cobá",
         "nivel": "localidad",
-        "tipo_zona": "localidad",
+        "tipo_zona": "localidad_rural",
         "zona_id": "corredor_tulum_coba",
         "localidad_id": null
       },
@@ -287,7 +169,7 @@
         "id": "macario_gomez",
         "nombre": "Macario Gómez",
         "nivel": "localidad",
-        "tipo_zona": "localidad",
+        "tipo_zona": "localidad_rural",
         "zona_id": "corredor_tulum_coba",
         "localidad_id": null
       },
@@ -299,7 +181,7 @@
         "id": "francisco_uh_may_loc",
         "nombre": "Francisco Uh May",
         "nivel": "localidad",
-        "tipo_zona": "localidad",
+        "tipo_zona": "localidad_rural",
         "zona_id": "corredor_tulum_coba",
         "localidad_id": null
       },
@@ -311,32 +193,8 @@
         "id": "manuel_antonio_ay_loc",
         "nombre": "Manuel Antonio Ay",
         "nivel": "localidad",
-        "tipo_zona": "localidad",
-        "zona_id": "corredor_tulum_felipe_sur",
-        "localidad_id": null
-      },
-      "geometry": null
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "id": "javier_rojo_gomez",
-        "nombre": "Javier Rojo Gómez",
-        "nivel": "localidad",
-        "tipo_zona": "localidad",
-        "zona_id": "corredor_tulum_felipe_sur",
-        "localidad_id": null
-      },
-      "geometry": null
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "id": "punta_allen",
-        "nombre": "Punta Allen",
-        "nivel": "localidad",
-        "tipo_zona": "localidad",
-        "zona_id": "sian_kaan_punta_allen",
+        "tipo_zona": "localidad_rural",
+        "zona_id": "corredor_tulum_coba",
         "localidad_id": null
       },
       "geometry": null
@@ -349,8 +207,8 @@
         "nombre": "Centro",
         "nivel": "colonia",
         "tipo_zona": "colonia_urbano",
-        "zona_id": "tulum_pueblo",
-        "localidad_id": "tulum"
+        "zona_id": "tulum",
+        "localidad_id": "tulum_pueblo"
       },
       "geometry": null
     },
@@ -361,8 +219,8 @@
         "nombre": "La Veleta",
         "nivel": "colonia",
         "tipo_zona": "colonia_urbano",
-        "zona_id": "tulum_pueblo",
-        "localidad_id": "tulum"
+        "zona_id": "tulum",
+        "localidad_id": "tulum_pueblo"
       },
       "geometry": null
     },
@@ -373,8 +231,8 @@
         "nombre": "Villas Tulum",
         "nivel": "colonia",
         "tipo_zona": "colonia_urbano",
-        "zona_id": "tulum_pueblo",
-        "localidad_id": "tulum"
+        "zona_id": "tulum",
+        "localidad_id": "tulum_pueblo"
       },
       "geometry": null
     },
@@ -385,11 +243,12 @@
         "nombre": "Aldea Zama",
         "nivel": "colonia",
         "tipo_zona": "colonia_urbano",
-        "zona_id": "tulum_pueblo",
-        "localidad_id": "tulum"
+        "zona_id": "tulum",
+        "localidad_id": "tulum_pueblo"
       },
       "geometry": null
     },
+
     {
       "type": "Feature",
       "properties": {
@@ -397,8 +256,8 @@
         "nombre": "Colonia Tumben Ka",
         "nivel": "colonia",
         "tipo_zona": "colonia_popular",
-        "zona_id": "tulum_pueblo",
-        "localidad_id": "tulum"
+        "zona_id": "tulum",
+        "localidad_id": "tulum_pueblo"
       },
       "geometry": null
     },
@@ -409,8 +268,8 @@
         "nombre": "Colonia Mayapax",
         "nivel": "colonia",
         "tipo_zona": "colonia_popular",
-        "zona_id": "tulum_pueblo",
-        "localidad_id": "tulum"
+        "zona_id": "tulum",
+        "localidad_id": "tulum_pueblo"
       },
       "geometry": null
     },
@@ -421,8 +280,8 @@
         "nombre": "Colonia Huracanes",
         "nivel": "colonia",
         "tipo_zona": "colonia_popular",
-        "zona_id": "tulum_pueblo",
-        "localidad_id": "tulum"
+        "zona_id": "tulum",
+        "localidad_id": "tulum_pueblo"
       },
       "geometry": null
     },
@@ -433,11 +292,12 @@
         "nombre": "Guerra de Castas",
         "nivel": "colonia",
         "tipo_zona": "colonia_popular",
-        "zona_id": "tulum_pueblo",
-        "localidad_id": "tulum"
+        "zona_id": "tulum",
+        "localidad_id": "tulum_pueblo"
       },
       "geometry": null
     },
+
     {
       "type": "Feature",
       "properties": {
@@ -445,8 +305,8 @@
         "nombre": "Región 15",
         "nivel": "colonia",
         "tipo_zona": "colonia_expansion",
-        "zona_id": "tulum_pueblo",
-        "localidad_id": "tulum"
+        "zona_id": "tulum",
+        "localidad_id": "tulum_pueblo"
       },
       "geometry": null
     },
@@ -457,8 +317,8 @@
         "nombre": "Región 8",
         "nivel": "colonia",
         "tipo_zona": "colonia_expansion",
-        "zona_id": "tulum_pueblo",
-        "localidad_id": "tulum"
+        "zona_id": "tulum",
+        "localidad_id": "tulum_pueblo"
       },
       "geometry": null
     }

@@ -13,7 +13,7 @@
         "localidad_id": null
       },
       "geometry": null
-},
+    },
     {
       "type": "Feature",
       "properties": {
@@ -25,7 +25,7 @@
         "localidad_id": null
       },
       "geometry": null
- },
+    },
     {
       "type": "Feature",
       "properties": {
@@ -49,7 +49,7 @@
         "localidad_id": null
       },
       "geometry": null
-},
+    },
     {
       "type": "Feature",
       "properties": {
@@ -83,10 +83,9 @@
         "tipo_zona": "costa",
         "zona_id": null,
         "localidad_id": null
-},
+      },
       "geometry": null
-},
-
+    },
     {
       "type": "Feature",
       "properties": {
@@ -155,8 +154,8 @@
         "nombre": "ANP Parque del Jaguar",
         "nivel": "zona",
         "tipo_zona": "anp",
-        "zona_id": "zona_hotelera_norte",
-        "localidad_id": "tulum"
+        "zona_id": null,
+        "localidad_id": null
       },
       "geometry": null
     },
@@ -167,8 +166,8 @@
         "nombre": "ANP Parque Nacional Tulum",
         "nivel": "zona",
         "tipo_zona": "anp",
-        "zona_id": "zona_hotelera_norte",
-        "localidad_id": "tulum"
+        "zona_id": null,
+        "localidad_id": null
       },
       "geometry": null
     },
@@ -179,7 +178,7 @@
         "nombre": "ANP Sian Ka’an",
         "nivel": "zona",
         "tipo_zona": "anp",
-        "zona_id": "sian_kaan_punta_allen",
+        "zona_id": null,
         "localidad_id": null
       },
       "geometry": null
@@ -229,7 +228,7 @@
         "nombre": "Tulum",
         "nivel": "localidad",
         "tipo_zona": "localidad",
-        "zona_id": "tulum_urbano_central",
+        "zona_id": "tulum_pueblo",
         "localidad_id": null
       },
       "geometry": null
@@ -350,7 +349,7 @@
         "nombre": "Centro",
         "nivel": "colonia",
         "tipo_zona": "colonia_urbano",
-        "zona_id": "tulum_urbano_central",
+        "zona_id": "tulum_pueblo",
         "localidad_id": "tulum"
       },
       "geometry": null
@@ -362,7 +361,7 @@
         "nombre": "La Veleta",
         "nivel": "colonia",
         "tipo_zona": "colonia_urbano",
-        "zona_id": "tulum_urbano_central",
+        "zona_id": "tulum_pueblo",
         "localidad_id": "tulum"
       },
       "geometry": null
@@ -374,7 +373,7 @@
         "nombre": "Villas Tulum",
         "nivel": "colonia",
         "tipo_zona": "colonia_urbano",
-        "zona_id": "tulum_urbano_central",
+        "zona_id": "tulum_pueblo",
         "localidad_id": "tulum"
       },
       "geometry": null
@@ -386,7 +385,7 @@
         "nombre": "Aldea Zama",
         "nivel": "colonia",
         "tipo_zona": "colonia_urbano",
-        "zona_id": "tulum_urbano_central",
+        "zona_id": "tulum_pueblo",
         "localidad_id": "tulum"
       },
       "geometry": null
@@ -398,7 +397,7 @@
         "nombre": "Colonia Tumben Ka",
         "nivel": "colonia",
         "tipo_zona": "colonia_popular",
-        "zona_id": "tulum_urbano_central",
+        "zona_id": "tulum_pueblo",
         "localidad_id": "tulum"
       },
       "geometry": null
@@ -410,7 +409,7 @@
         "nombre": "Colonia Mayapax",
         "nivel": "colonia",
         "tipo_zona": "colonia_popular",
-        "zona_id": "tulum_urbano_central",
+        "zona_id": "tulum_pueblo",
         "localidad_id": "tulum"
       },
       "geometry": null
@@ -422,7 +421,7 @@
         "nombre": "Colonia Huracanes",
         "nivel": "colonia",
         "tipo_zona": "colonia_popular",
-        "zona_id": "tulum_urbano_central",
+        "zona_id": "tulum_pueblo",
         "localidad_id": "tulum"
       },
       "geometry": null
@@ -434,7 +433,7 @@
         "nombre": "Guerra de Castas",
         "nivel": "colonia",
         "tipo_zona": "colonia_popular",
-        "zona_id": "tulum_urbano_central",
+        "zona_id": "tulum_pueblo",
         "localidad_id": "tulum"
       },
       "geometry": null
@@ -446,7 +445,7 @@
         "nombre": "Región 15",
         "nivel": "colonia",
         "tipo_zona": "colonia_expansion",
-        "zona_id": "tulum_urbano_central",
+        "zona_id": "tulum_pueblo",
         "localidad_id": "tulum"
       },
       "geometry": null
@@ -458,7 +457,7 @@
         "nombre": "Región 8",
         "nivel": "colonia",
         "tipo_zona": "colonia_expansion",
-        "zona_id": "tulum_urbano_central",
+        "zona_id": "tulum_pueblo",
         "localidad_id": "tulum"
       },
       "geometry": null

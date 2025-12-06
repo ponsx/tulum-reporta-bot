@@ -66,8 +66,8 @@
       .leaflet-popup-content {
         font-size: 14px;
       }
-      .leaflet-popup-content-wrapper{
-        margin-top:40px;
+      .leaflet-popup-content-wrapper {
+        margin-top: 40px;
       }
 
       .popup-titulo {
@@ -87,33 +87,32 @@
       }
 
       .popup-foto {
-          margin-top: 6px;
-          text-align: center;
-        }
-        
-        .popup-foto img {
-          display: block;
-          max-width: 100%;
-          width: 100%;          /* ocupa el ancho disponible del popup */
-          height: auto;
-          max-height: 200px;    /* ajusta a tu gusto */
-          border-radius: 8px;
-          object-fit: cover;
-          margin: 0 auto 6px;
-        }
+        margin-top: 6px;
+        text-align: center;
+      }
+
+      .popup-foto img {
+        display: block;
+        max-width: 100%;
+        width: 100%; /* ocupa el ancho disponible del popup */
+        height: auto;
+        max-height: 200px; /* ajusta a tu gusto */
+        border-radius: 8px;
+        object-fit: cover;
+        margin: 0 auto 6px;
+      }
 
       /* Ancho fijo para TODOS los popups */
-        .leaflet-popup-content {
-          width: 240px !important;    /* elige tu ancho ideal */
-          max-width: 240px !important;
-        }
-        
-        /* Evita que el texto rompa el diseño */
-        .leaflet-popup-content p,
-        .leaflet-popup-content div {
-          word-wrap: break-word;
-        }
+      .leaflet-popup-content {
+        width: 240px !important; /* elige tu ancho ideal */
+        max-width: 240px !important;
+      }
 
+      /* Evita que el texto rompa el diseño */
+      .leaflet-popup-content p,
+      .leaflet-popup-content div {
+        word-wrap: break-word;
+      }
 
       /* MARKERS POR CATEGORÍA */
       .custom-marker-wrapper {
@@ -133,50 +132,66 @@
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
       }
 
-      .marker-calles { background-color: #FFC7C4; }
-      .marker-luces { background-color: #FFFFFF; }
-      .marker-limpieza { background-color: #CFFFD1; }
-      .marker-agua { background-color: #c8fffe; }
-      .marker-espacio { background-color: #D6E7FB; }
-      .marker-fauna { background-color: #E6C9A8; }
-      .marker-construccion { background-color: #FFEFB3; }
-      .marker-otro { background-color: #E2E2E5; }
+      .marker-calles {
+        background-color: #ffc7c4;
+      }
+      .marker-luces {
+        background-color: #ffffff;
+      }
+      .marker-limpieza {
+        background-color: #cfffd1;
+      }
+      .marker-agua {
+        background-color: #c8fffe;
+      }
+      .marker-espacio {
+        background-color: #d6e7fb;
+      }
+      .marker-fauna {
+        background-color: #e6c9a8;
+      }
+      .marker-construccion {
+        background-color: #ffefb3;
+      }
+      .marker-otro {
+        background-color: #e2e2e5;
+      }
 
-   /* LIGHTBOX */
-   .lightbox {
-      position: fixed;
-      inset: 0;
-      background: rgba(15, 23, 42, 0.85);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 2000;
-    }
-    
-    .lightbox.is-visible {
-      display: flex;
-    }
-    
-    #lightbox-img {
-      max-width: 90vw;
-      max-height: 90vh;
-      border-radius: 12px;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
-    }
-    
-    /* Opcional: cursor de zoom */
-    .popup-foto img.popup-img {
-      cursor: zoom-in;
-    }
+      /* LIGHTBOX */
+      .lightbox {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.85);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 2000;
+      }
 
+      .lightbox.is-visible {
+        display: flex;
+      }
+
+      #lightbox-img {
+        max-width: 90vw;
+        max-height: 90vh;
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+      }
+
+      /* Opcional: cursor de zoom */
+      .popup-foto img.popup-img {
+        cursor: zoom-in;
+      }
     </style>
   </head>
 
-<!-- Lightbox -->
-<div id="lightbox" class="lightbox">
-  <img id="lightbox-img" alt="Foto del reporte ampliada" />
-</div>
   <body>
+    <!-- Lightbox -->
+    <div id="lightbox" class="lightbox">
+      <img id="lightbox-img" alt="Foto del reporte ampliada" />
+    </div>
+
     <!-- Barra de filtros -->
     <div id="toolbar">
       <label for="zonaFilter">Zona:</label>
@@ -220,7 +235,7 @@
         "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
         {
           maxZoom: 19,
-          attribution: "© OpenStreetMap"
+          attribution: "© OpenStreetMap",
         }
       );
 
@@ -228,7 +243,7 @@
         "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
         {
           maxZoom: 20,
-          attribution: "© Esri"
+          attribution: "© Esri",
         }
       );
 
@@ -236,18 +251,24 @@
       const map = L.map("map", {
         center: [20.214, -87.45],
         zoom: 12,
-        layers: [capaOSM]
+        layers: [capaOSM],
       });
 
+      // Pane para las zonas (debajo de los pines de incidentes)
+      map.createPane("zonasPane");
+      map.getPane("zonasPane").style.zIndex = 350;
+
       // Control de capas
-      L.control.layers(
-        {
-          "Mapa estándar": capaOSM,
-          "Satélite": capaSatelite
-        },
-        null,
-        { position: "topright" }
-      ).addTo(map);
+      L.control
+        .layers(
+          {
+            "Mapa estándar": capaOSM,
+            Satélite: capaSatelite,
+          },
+          null,
+          { position: "topright" }
+        )
+        .addTo(map);
 
       /* =========================
          SISTEMA DE MARKERS + FILTROS
@@ -257,6 +278,7 @@
       let allReportes = [];
       let markersById = {};
       let zonasCollection = null; // GeoJSON de zonas
+      let zonasLayer = null; // Capa Leaflet de zonas
 
       function getCategoriaKey(nombre) {
         if (!nombre) return "otro";
@@ -285,7 +307,9 @@
       function createCategoriaIcon(cat) {
         return L.divIcon({
           className: "custom-marker-wrapper",
-          html: `<div class="marker-circle marker-${getCategoriaKey(cat)}">${getCategoriaEmoji(cat)}</div>`,
+          html: `<div class="marker-circle marker-${getCategoriaKey(
+            cat
+          )}">${getCategoriaEmoji(cat)}</div>`,
           iconSize: [30, 30],
           iconAnchor: [15, 15],
           popupAnchor: [0, -15],
@@ -302,8 +326,8 @@
             <div class="popup-sub">${inc.subcategoria || ""}</div>
 
            ${
-              inc.foto_url
-                ? `<div class="popup-foto">
+             inc.foto_url
+               ? `<div class="popup-foto">
                     <img
                       src="${inc.foto_url}"
                       alt="Foto del reporte"
@@ -311,9 +335,8 @@
                       data-full="${inc.foto_url}"
                     />
                   </div>`
-                : ""
-            }
-
+               : ""
+           }
 
             ${
               inc.descripcion
@@ -323,7 +346,9 @@
 
             ${
               inc.gravedad
-                ? `<div class="popup-detalle"><small>Peligro percibido: ${inc.gravedad}/5</small></div>`
+                ? `<div class="popup-detalle"><small>Peligro percibido: ${
+                    inc.gravedad
+                  }/5</small></div>`
                 : ""
             }
 
@@ -405,90 +430,87 @@
         }
       }
 
-
       // ====== LIGHTBOX PARA FOTOS DEL POPUP ======
-        const lightboxEl = document.getElementById("lightbox");
-        const lightboxImg = document.getElementById("lightbox-img");
-        
-        function abrirLightbox(src) {
-          if (!src) return;
-          lightboxImg.src = src;
-          lightboxEl.classList.add("is-visible");
-        }
-        
-        function cerrarLightbox() {
-          lightboxEl.classList.remove("is-visible");
-          lightboxImg.src = "";
-        }
-        
-        // Click en cualquier imagen dentro del popup
-        document.addEventListener("click", (e) => {
-          const img = e.target.closest(".popup-img");
-          if (!img) return;
-          e.preventDefault();
-          const src = img.dataset.full || img.src;
-          abrirLightbox(src);
-        });
-        
-        // Cerrar al clickar en el fondo
-        lightboxEl.addEventListener("click", cerrarLightbox);
-        
-        // Cerrar con ESC
-        document.addEventListener("keydown", (e) => {
-          if (e.key === "Escape") {
-            cerrarLightbox();
-          }
-        });
+      const lightboxEl = document.getElementById("lightbox");
+      const lightboxImg = document.getElementById("lightbox-img");
 
+      function abrirLightbox(src) {
+        if (!src) return;
+        lightboxImg.src = src;
+        lightboxEl.classList.add("is-visible");
+      }
+
+      function cerrarLightbox() {
+        lightboxEl.classList.remove("is-visible");
+        lightboxImg.src = "";
+      }
+
+      // Click en cualquier imagen dentro del popup
+      document.addEventListener("click", (e) => {
+        const img = e.target.closest(".popup-img");
+        if (!img) return;
+        e.preventDefault();
+        const src = img.dataset.full || img.src;
+        abrirLightbox(src);
+      });
+
+      // Cerrar al clickar en el fondo
+      lightboxEl.addEventListener("click", cerrarLightbox);
+
+      // Cerrar con ESC
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          cerrarLightbox();
+        }
+      });
 
       /* =========================
          GEOMETRÍA CON TURF.JS
          ========================= */
 
-     // Asignar zona (en realidad: LOCALIDAD) a cada reporte según lat/lon
-function asignarZonaAReportes(reportes, zonasGeoJSON) {
-  if (!zonasGeoJSON || !zonasGeoJSON.features) return;
+      // Asignar zona (en realidad: LOCALIDAD) a cada reporte según lat/lon
+      function asignarZonaAReportes(reportes, zonasGeoJSON) {
+        if (!zonasGeoJSON || !zonasGeoJSON.features) return;
 
-  // Nos quedamos SOLO con las LOCALIDADES
-  const features = zonasGeoJSON.features.filter((f) => {
-    return (
-      f.properties &&
-      typeof f.properties.nivel === "string" &&
-      f.properties.nivel.toLowerCase() === "localidad"
-    );
-  });
+        // Nos quedamos SOLO con las LOCALIDADES
+        const features = zonasGeoJSON.features.filter((f) => {
+          return (
+            f.properties &&
+            typeof f.properties.nivel === "string" &&
+            f.properties.nivel.toLowerCase() === "localidad"
+          );
+        });
 
-  reportes.forEach((inc) => {
-    if (inc.lat == null || inc.lon == null) return;
+        reportes.forEach((inc) => {
+          if (inc.lat == null || inc.lon == null) return;
 
-    const lon = Number(inc.lon);
-    const lat = Number(inc.lat);
-    if (Number.isNaN(lon) || Number.isNaN(lat)) return;
+          const lon = Number(inc.lon);
+          const lat = Number(inc.lat);
+          if (Number.isNaN(lon) || Number.isNaN(lat)) return;
 
-    const punto = turf.point([lon, lat]);
+          const punto = turf.point([lon, lat]);
 
-    let zonaNombre = null;
-    let zonaId = null;
+          let zonaNombre = null;
+          let zonaId = null;
 
-    for (let i = 0; i < features.length; i++) {
-      const f = features[i];
-      if (!f.geometry) continue;
+          for (let i = 0; i < features.length; i++) {
+            const f = features[i];
+            if (!f.geometry) continue;
 
-      if (turf.booleanPointInPolygon(punto, f)) {
-        const props = f.properties || {};
-        zonaNombre = props.nombre || props.name || `Zona ${i + 1}`;
-        zonaId = props.id || props.codigo || `zona_${i + 1}`;
-        break; // primera localidad que contenga el punto
+            if (turf.booleanPointInPolygon(punto, f)) {
+              const props = f.properties || {};
+              zonaNombre = props.nombre || props.name || `Zona ${i + 1}`;
+              zonaId = props.id || props.codigo || `zona_${i + 1}`;
+              break; // primera localidad que contenga el punto
+            }
+          }
+
+          if (zonaNombre) {
+            inc.zonaNombre = zonaNombre;
+            inc.zonaId = zonaId;
+          }
+        });
       }
-    }
-
-    if (zonaNombre) {
-      inc.zonaNombre = zonaNombre;
-      inc.zonaId = zonaId;
-    }
-  });
-}
-
 
       function renderMarkers() {
         markersLayer.clearLayers();
@@ -516,16 +538,16 @@ function asignarZonaAReportes(reportes, zonasGeoJSON) {
           const marker = L.marker([inc.lat, inc.lon], {
             icon: createCategoriaIcon(inc.categoria),
           }).addTo(markersLayer);
-          
+
           const popupHtml = createPopupContent(inc);
           marker.bindPopup(popupHtml);
-          
+
           // Cuando se abre el popup, si la imagen carga después, reajustamos
           marker.on("popupopen", (e) => {
             const popup = e.popup;
             const popupEl = popup.getElement();
             if (!popupEl) return;
-          
+
             const imgs = popupEl.querySelectorAll("img.popup-img");
             imgs.forEach((img) => {
               if (img.complete) {
@@ -555,7 +577,7 @@ function asignarZonaAReportes(reportes, zonasGeoJSON) {
          CARGA DE ZONAS + REPORTES
          ========================= */
 
-      // 1) Cargar GeoJSON de zonas (solo para lógica, no se dibuja)
+      // 1) Cargar GeoJSON de zonas (se usa para lógica y para dibujar en el mapa)
       fetch("/data/zonas_tulum_ejemplo.geojson") // ajusta la ruta/nombre si usas otro archivo
         .then((res) => {
           if (!res.ok) throw new Error("No se pudo cargar el GeoJSON de zonas");
@@ -563,6 +585,64 @@ function asignarZonaAReportes(reportes, zonasGeoJSON) {
         })
         .then((zonas) => {
           zonasCollection = zonas;
+
+          // Capa visual de zonas
+          zonasLayer = L.geoJSON(zonasCollection, {
+            pane: "zonasPane",
+            style: (feature) => {
+              const nivel = feature.properties?.nivel;
+              switch (nivel) {
+                case "municipio":
+                  return {
+                    color: "#222222",
+                    weight: 2,
+                    fillOpacity: 0,
+                  };
+                case "zona":
+                  return {
+                    color: "#ff7f00",
+                    weight: 1.5,
+                    fillOpacity: 0.04,
+                  };
+                case "localidad":
+                  return {
+                    color: "#0055ff",
+                    weight: 1,
+                    fillOpacity: 0.03,
+                    dashArray: "4 4",
+                  };
+                case "colonia":
+                  return {
+                    color: "#00aa55",
+                    weight: 0.7,
+                    fillOpacity: 0.02,
+                  };
+                default:
+                  return {
+                    color: "#999999",
+                    weight: 1,
+                    fillOpacity: 0.02,
+                  };
+              }
+            },
+            onEachFeature: (feature, layer) => {
+              const p = feature.properties || {};
+              const nombre = p.nombre || p.id || "Zona sin nombre";
+              const nivel = p.nivel || "sin nivel";
+              const tipo = p.tipo_zona || "";
+              const zonaId = p.zona_id || "";
+              const locId = p.localidad_id || "";
+
+              layer.bindPopup(
+                `<strong>${nombre}</strong><br>` +
+                  `Nivel: ${nivel}<br>` +
+                  (tipo ? `Tipo: ${tipo}<br>` : "") +
+                  (zonaId ? `Zona ID: ${zonaId}<br>` : "") +
+                  (locId ? `Localidad ID: ${locId}` : "")
+              );
+            },
+            filter: (feature) => !!feature.geometry,
+          }).addTo(map);
         })
         .catch((err) => {
           console.warn("No se pudieron cargar zonas:", err);

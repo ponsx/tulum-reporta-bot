@@ -94,9 +94,9 @@
       .popup-foto img {
         display: block;
         max-width: 100%;
-        width: 100%; /* ocupa el ancho disponible del popup */
+        width: 100%;
         height: auto;
-        max-height: 200px; /* ajusta a tu gusto */
+        max-height: 200px;
         border-radius: 8px;
         object-fit: cover;
         margin: 0 auto 6px;
@@ -104,7 +104,7 @@
 
       /* Ancho fijo para TODOS los popups */
       .leaflet-popup-content {
-        width: 240px !important; /* elige tu ancho ideal */
+        width: 240px !important;
         max-width: 240px !important;
       }
 
@@ -179,7 +179,6 @@
         box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
       }
 
-      /* Opcional: cursor de zoom */
       .popup-foto img.popup-img {
         cursor: zoom-in;
       }
@@ -194,9 +193,9 @@
 
     <!-- Barra de filtros -->
     <div id="toolbar">
-      <label for="zonaFilter">Zona:</label>
+      <label for="zonaFilter">Colonia:</label>
       <select id="zonaFilter">
-        <option value="">Todas las zonas</option>
+        <option value="">Todas las colonias</option>
       </select>
 
       <label for="categoriaFilter">Categoría:</label>
@@ -247,7 +246,6 @@
         }
       );
 
-      // Crear mapa con OSM por defecto
       const map = L.map("map", {
         center: [20.214, -87.45],
         zoom: 12,
@@ -258,7 +256,6 @@
       map.createPane("zonasPane");
       map.getPane("zonasPane").style.zIndex = 350;
 
-      // Control de capas
       L.control
         .layers(
           {
@@ -277,8 +274,8 @@
       const markersLayer = L.layerGroup().addTo(map);
       let allReportes = [];
       let markersById = {};
-      let zonasCollection = null; // GeoJSON de zonas
-      let zonasLayer = null; // Capa Leaflet de zonas
+      let zonasCollection = null;
+      let zonasLayer = null;
 
       function getCategoriaKey(nombre) {
         if (!nombre) return "otro";
@@ -318,7 +315,7 @@
 
       function createPopupContent(inc) {
         const zonaTxt = inc.zonaNombre
-          ? `<div class="popup-detalle"><small>Zona: ${inc.zonaNombre}</small></div>`
+          ? `<div class="popup-detalle"><small>Colonia: ${inc.zonaNombre}</small></div>`
           : "";
         return `
           <div>
@@ -377,7 +374,6 @@
 
       function populateZonaFilter(reportes) {
         const select = document.getElementById("zonaFilter");
-        // limpiar opciones (dejando "Todas")
         while (select.options.length > 1) {
           select.remove(1);
         }
@@ -398,10 +394,9 @@
         });
       }
 
-      // ---- Filtro temporal ----
       function pasaFiltroTiempo(inc, filtroTiempo) {
         if (!filtroTiempo || filtroTiempo === "all") return true;
-        if (!inc.created_at) return true; // si no hay fecha, no lo escondemos
+        if (!inc.created_at) return true;
 
         const ahora = new Date();
         const creado = new Date(inc.created_at);
@@ -412,7 +407,7 @@
         const unaSemanaMs = 7 * unDiaMs;
 
         const yearNow = ahora.getFullYear();
-        const monthNow = ahora.getMonth(); // 0–11
+        const monthNow = ahora.getMonth();
         const yearCreated = creado.getFullYear();
         const monthCreated = creado.getMonth();
 
@@ -430,7 +425,7 @@
         }
       }
 
-      // ====== LIGHTBOX PARA FOTOS DEL POPUP ======
+      // LIGHTBOX
       const lightboxEl = document.getElementById("lightbox");
       const lightboxImg = document.getElementById("lightbox-img");
 
@@ -445,7 +440,6 @@
         lightboxImg.src = "";
       }
 
-      // Click en cualquier imagen dentro del popup
       document.addEventListener("click", (e) => {
         const img = e.target.closest(".popup-img");
         if (!img) return;
@@ -454,10 +448,8 @@
         abrirLightbox(src);
       });
 
-      // Cerrar al clickar en el fondo
       lightboxEl.addEventListener("click", cerrarLightbox);
 
-      // Cerrar con ESC
       document.addEventListener("keydown", (e) => {
         if (e.key === "Escape") {
           cerrarLightbox();
@@ -468,16 +460,16 @@
          GEOMETRÍA CON TURF.JS
          ========================= */
 
-      // Asignar zona (en realidad: LOCALIDAD) a cada reporte según lat/lon
+      // Asignar COLONIA a cada reporte según lat/lon
       function asignarZonaAReportes(reportes, zonasGeoJSON) {
         if (!zonasGeoJSON || !zonasGeoJSON.features) return;
 
-        // Nos quedamos SOLO con las LOCALIDADES
+        // Ahora usamos SOLO las COLONIAS
         const features = zonasGeoJSON.features.filter((f) => {
           return (
             f.properties &&
             typeof f.properties.nivel === "string" &&
-            f.properties.nivel.toLowerCase() === "localidad"
+            f.properties.nivel.toLowerCase() === "colonia"
           );
         });
 
@@ -499,9 +491,9 @@
 
             if (turf.booleanPointInPolygon(punto, f)) {
               const props = f.properties || {};
-              zonaNombre = props.nombre || props.name || `Zona ${i + 1}`;
-              zonaId = props.id || props.codigo || `zona_${i + 1}`;
-              break; // primera localidad que contenga el punto
+              zonaNombre = props.nombre || props.name || `Colonia ${i + 1}`;
+              zonaId = props.id || props.codigo || `colonia_${i + 1}`;
+              break;
             }
           }
 
@@ -524,15 +516,12 @@
         allReportes.forEach((inc) => {
           if (!inc.lat || !inc.lon) return;
 
-          // filtro zona
           if (zonaSeleccionada && inc.zonaNombre !== zonaSeleccionada) {
             return;
           }
 
-          // filtro categoría
           if (categoria && inc.categoria !== categoria) return;
 
-          // filtro temporal
           if (!pasaFiltroTiempo(inc, filtroTiempo)) return;
 
           const marker = L.marker([inc.lat, inc.lon], {
@@ -542,7 +531,6 @@
           const popupHtml = createPopupContent(inc);
           marker.bindPopup(popupHtml);
 
-          // Cuando se abre el popup, si la imagen carga después, reajustamos
           marker.on("popupopen", (e) => {
             const popup = e.popup;
             const popupEl = popup.getElement();
@@ -577,8 +565,7 @@
          CARGA DE ZONAS + REPORTES
          ========================= */
 
-      // 1) Cargar GeoJSON de zonas (se usa para lógica y para dibujar en el mapa)
-      fetch("/data/zonas_tulum_ejemplo.geojson") // ajusta la ruta/nombre si usas otro archivo
+      fetch("/data/zonas_tulum_ejemplo.geojson")
         .then((res) => {
           if (!res.ok) throw new Error("No se pudo cargar el GeoJSON de zonas");
           return res.json();
@@ -586,7 +573,6 @@
         .then((zonas) => {
           zonasCollection = zonas;
 
-          // Capa visual de zonas
           zonasLayer = L.geoJSON(zonasCollection, {
             pane: "zonasPane",
             style: (feature) => {
@@ -648,13 +634,11 @@
           console.warn("No se pudieron cargar zonas:", err);
         })
         .finally(() => {
-          // 2) Cargar reportes
           fetch("/api/reportes")
             .then((res) => res.json())
             .then((reportes) => {
               allReportes = reportes || [];
 
-              // Si hay zonas cargadas, asignarlas a cada reporte
               if (zonasCollection) {
                 asignarZonaAReportes(allReportes, zonasCollection);
                 populateZonaFilter(allReportes);
@@ -666,7 +650,6 @@
             .catch((err) => console.error("Error cargando reportes:", err));
         });
 
-      // Eventos de filtros
       document
         .getElementById("categoriaFilter")
         .addEventListener("change", renderMarkers);

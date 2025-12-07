@@ -12,7 +12,17 @@
       crossorigin=""
     />
 
-    <!-- Font Awesome para íconos de marcadores (SIN integrity para evitar bloqueos) -->
+    <!-- MarkerCluster CSS -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"
+    />
+
+    <!-- Font Awesome para íconos de marcadores -->
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
@@ -168,22 +178,27 @@
         justify-content: center;
         border: 2px solid rgba(255, 255, 255, 1) !important;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+
+        /* Animación de entrada */
+        opacity: 0;
+        transform: scale(0.4);
+        animation: pin-pop 0.35s ease-out forwards;
       }
 
       .marker-circle i {
         display: inline-block;
         font-size: 18px;
         line-height: 1;
-        color: #fff; 
-        text-shadow: 0 0 3px rgba(0,0,0,0.25);
+        color: #fff;
+        text-shadow: 0 0 3px rgba(0, 0, 0, 0.25);
       }
 
       /* Paleta viva y diferenciada */
       .marker-calles {
-        background-color: #6b7280; /* gray-500 */
+        background-color: #6b7280; /* gris carreteras */
       }
       .marker-luces {
-        background-color: #f59e0b; /* amarillo-naranja */
+        background-color: #f59e0b; /* amber luces */
       }
       .marker-limpieza {
         background-color: #22c55e; /* verde */
@@ -192,16 +207,32 @@
         background-color: #0ea5e9; /* azul cielo */
       }
       .marker-espacio {
-        background-color: #a855f7; /* purpura */
+        background-color: #a855f7; /* púrpura banquetas */
       }
       .marker-fauna {
-        background-color: #14b8a6; /* turquesa */
+        background-color: #14b8a6; /* turquesa fauna */
       }
       .marker-construccion {
-        background-color: #ef4444; /* red-500 */
+        background-color: #ef4444; /* rojo obras */
       }
       .marker-otro {
         background-color: #9ca3af; /* gris */
+      }
+
+      /* Animación de entrada de pins */
+      @keyframes pin-pop {
+        0% {
+          opacity: 0;
+          transform: scale(0.4);
+        }
+        60% {
+          opacity: 1;
+          transform: scale(1.1);
+        }
+        100% {
+          opacity: 1;
+          transform: scale(1);
+        }
       }
 
       /* ==== Lightbox ==== */
@@ -228,6 +259,20 @@
 
       .popup-foto img.popup-img {
         cursor: zoom-in;
+      }
+
+      /* ==== Estilo básico de clusters ==== */
+      .marker-cluster-small,
+      .marker-cluster-medium,
+      .marker-cluster-large {
+        background-color: rgba(15, 23, 42, 0.85);
+        border: 2px solid #f9fafb;
+      }
+
+      .marker-cluster div {
+        background-color: rgba(248, 250, 252, 0.95);
+        color: #0f172a;
+        font-weight: 600;
       }
 
       /* ==== Mobile ==== */
@@ -305,6 +350,9 @@
       crossorigin=""
     ></script>
 
+    <!-- MarkerCluster JS -->
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
     <!-- Turf.js para point-in-polygon -->
     <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
 
@@ -347,10 +395,16 @@
         .addTo(map);
 
       /* =========================
-         SISTEMA DE MARKERS + FILTROS
+         SISTEMA DE MARKERS + CLUSTER + FILTROS
          ========================= */
 
-      const markersLayer = L.layerGroup().addTo(map);
+      // Grupo de clusters en vez de simple layerGroup
+      const markersLayer = L.markerClusterGroup({
+        showCoverageOnHover: false,
+        maxClusterRadius: 50, // px – controla cuándo agrupa
+        spiderfyOnEveryZoom: false,
+      }).addTo(map);
+
       let allReportes = [];
       let markersById = {};
       let zonasCollection = null;
@@ -369,7 +423,7 @@
 
       function getCategoriaIconClass(nombre) {
         if (!nombre) return "fa-solid fa-location-dot";
-      
+
         if (nombre.startsWith("Calles y Carreteras")) {
           return "fa-solid fa-car";
         }
@@ -391,10 +445,9 @@
         if (nombre.startsWith("Construcción y Obras")) {
           return "fa-solid fa-person-digging";
         }
-      
+
         return "fa-solid fa-location-dot";
       }
-
 
       function createCategoriaIcon(cat) {
         const catKey = getCategoriaKey(cat);
@@ -635,7 +688,7 @@
 
           const marker = L.marker([inc.lat, inc.lon], {
             icon: createCategoriaIcon(inc.categoria),
-          }).addTo(markersLayer);
+          });
 
           const popupHtml = createPopupContent(inc);
           marker.bindPopup(popupHtml);
@@ -661,6 +714,7 @@
             });
           });
 
+          markersLayer.addLayer(marker);
           markersById[inc.id] = marker;
           bounds.push([inc.lat, inc.lon]);
         });
@@ -702,9 +756,21 @@
             .catch((err) => console.error("Error cargando reportes:", err));
         });
 
-      document.getElementById("categoriaFilter").addEventListener("change", renderMarkers);
-      document.getElementById("zonaFilter").addEventListener("change", renderMarkers);
-      document.getElementById("timeFilter").addEventListener("change", renderMarkers);
+      /* =========================
+         EVENTOS DE FILTRO
+         ========================= */
+
+      document
+        .getElementById("categoriaFilter")
+        .addEventListener("change", renderMarkers);
+
+      document
+        .getElementById("zonaFilter")
+        .addEventListener("change", renderMarkers);
+
+      document
+        .getElementById("timeFilter")
+        .addEventListener("change", renderMarkers);
 
       /* =========================
          TOGGLE FILTROS

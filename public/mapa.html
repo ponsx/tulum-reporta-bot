@@ -193,9 +193,9 @@
 
     <!-- Barra de filtros -->
     <div id="toolbar">
-      <label for="zonaFilter">Colonia:</label>
+      <label for="zonaFilter">Zona:</label>
       <select id="zonaFilter">
-        <option value="">Todas las colonias</option>
+        <option value="">Todas las zonas</option>
       </select>
 
       <label for="categoriaFilter">Categoría:</label>
@@ -252,10 +252,6 @@
         layers: [capaOSM],
       });
 
-      // Pane para las zonas (debajo de los pines de incidentes)
-      map.createPane("zonasPane");
-      map.getPane("zonasPane").style.zIndex = 350;
-
       L.control
         .layers(
           {
@@ -275,7 +271,6 @@
       let allReportes = [];
       let markersById = {};
       let zonasCollection = null;
-      let zonasLayer = null;
 
       function getCategoriaKey(nombre) {
         if (!nombre) return "otro";
@@ -315,7 +310,7 @@
 
       function createPopupContent(inc) {
         const zonaTxt = inc.zonaNombre
-          ? `<div class="popup-detalle"><small>Colonia: ${inc.zonaNombre}</small></div>`
+          ? `<div class="popup-detalle"><small>Zona: ${inc.zonaNombre}</small></div>`
           : "";
         return `
           <div>
@@ -460,18 +455,20 @@
          GEOMETRÍA CON TURF.JS
          ========================= */
 
-      // Asignar COLONIA a cada reporte según lat/lon
+      // Asignar ZONA a cada reporte según lat/lon
+      // Elige siempre el nivel más específico disponible:
+      // colonia > localidad > zona > municipio
       function asignarZonaAReportes(reportes, zonasGeoJSON) {
         if (!zonasGeoJSON || !zonasGeoJSON.features) return;
 
-        // Ahora usamos SOLO las COLONIAS
-        const features = zonasGeoJSON.features.filter((f) => {
-          return (
-            f.properties &&
-            typeof f.properties.nivel === "string" &&
-            f.properties.nivel.toLowerCase() === "colonia"
-          );
-        });
+        const features = zonasGeoJSON.features.filter((f) => f.geometry);
+
+        const prioridadNivel = {
+          colonia: 0,
+          localidad: 1,
+          zona: 2,
+          municipio: 3,
+        };
 
         reportes.forEach((inc) => {
           if (inc.lat == null || inc.lon == null) return;
@@ -482,24 +479,31 @@
 
           const punto = turf.point([lon, lat]);
 
-          let zonaNombre = null;
-          let zonaId = null;
+          let mejorFeature = null;
+          let mejorPrioridad = Infinity;
 
           for (let i = 0; i < features.length; i++) {
             const f = features[i];
             if (!f.geometry) continue;
 
-            if (turf.booleanPointInPolygon(punto, f)) {
-              const props = f.properties || {};
-              zonaNombre = props.nombre || props.name || `Colonia ${i + 1}`;
-              zonaId = props.id || props.codigo || `colonia_${i + 1}`;
-              break;
+            if (!turf.booleanPointInPolygon(punto, f)) continue;
+
+            const props = f.properties || {};
+            const nivelRaw = (props.nivel || "").toString().toLowerCase();
+            const prioridad = prioridadNivel[nivelRaw] ?? 99;
+
+            if (prioridad < mejorPrioridad) {
+              mejorPrioridad = prioridad;
+              mejorFeature = f;
             }
           }
 
-          if (zonaNombre) {
-            inc.zonaNombre = zonaNombre;
-            inc.zonaId = zonaId;
+          if (mejorFeature) {
+            const props = mejorFeature.properties || {};
+            inc.zonaNombre =
+              props.nombre || props.name || props.id || "Zona sin nombre";
+            inc.zonaId = props.id || props.codigo || null;
+            inc.zonaNivel = props.nivel || null;
           }
         });
       }
@@ -565,70 +569,14 @@
          CARGA DE ZONAS + REPORTES
          ========================= */
 
-      fetch("/data/zonas_tulum_ejemplo.geojson")
+      // OJO: coloca tu zonas_tulum.geojson en /public/data/ y ajusta la ruta si hace falta
+      fetch("/data/zonas_tulum.geojson")
         .then((res) => {
           if (!res.ok) throw new Error("No se pudo cargar el GeoJSON de zonas");
           return res.json();
         })
         .then((zonas) => {
           zonasCollection = zonas;
-
-          zonasLayer = L.geoJSON(zonasCollection, {
-            pane: "zonasPane",
-            style: (feature) => {
-              const nivel = feature.properties?.nivel;
-              switch (nivel) {
-                case "municipio":
-                  return {
-                    color: "#222222",
-                    weight: 2,
-                    fillOpacity: 0,
-                  };
-                case "zona":
-                  return {
-                    color: "#ff7f00",
-                    weight: 1.5,
-                    fillOpacity: 0.04,
-                  };
-                case "localidad":
-                  return {
-                    color: "#0055ff",
-                    weight: 1,
-                    fillOpacity: 0.03,
-                    dashArray: "4 4",
-                  };
-                case "colonia":
-                  return {
-                    color: "#00aa55",
-                    weight: 0.7,
-                    fillOpacity: 0.02,
-                  };
-                default:
-                  return {
-                    color: "#999999",
-                    weight: 1,
-                    fillOpacity: 0.02,
-                  };
-              }
-            },
-            onEachFeature: (feature, layer) => {
-              const p = feature.properties || {};
-              const nombre = p.nombre || p.id || "Zona sin nombre";
-              const nivel = p.nivel || "sin nivel";
-              const tipo = p.tipo_zona || "";
-              const zonaId = p.zona_id || "";
-              const locId = p.localidad_id || "";
-
-              layer.bindPopup(
-                `<strong>${nombre}</strong><br>` +
-                  `Nivel: ${nivel}<br>` +
-                  (tipo ? `Tipo: ${tipo}<br>` : "") +
-                  (zonaId ? `Zona ID: ${zonaId}<br>` : "") +
-                  (locId ? `Localidad ID: ${locId}` : "")
-              );
-            },
-            filter: (feature) => !!feature.geometry,
-          }).addTo(map);
         })
         .catch((err) => {
           console.warn("No se pudieron cargar zonas:", err);

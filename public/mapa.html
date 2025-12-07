@@ -183,48 +183,16 @@
         cursor: zoom-in;
       }
 
-      /* ===== Ajustes mobile ===== */
-      @media (max-width: 640px) {
-        /* Usa la altura real de la ventana en móviles modernos */
-        #map {
-          height: 100dvh;
-        }
-      
-        #toolbar {
-          position: fixed;
-          bottom: 8px;
-          left: 50%;
-          transform: translateX(-50%);
-          width: calc(100% - 16px);     /* casi full-width */
-          border-radius: 16px;
-          padding: 8px 12px;
-          box-shadow: 0 4px 14px rgba(15, 23, 42, 0.25);
-      
-          /* Layout vertical más legible en pantalla pequeña */
-          flex-direction: column;
-          align-items: stretch;
-          gap: 6px;
-          font-size: 12px;
-        }
-      
-        #toolbar label {
-          font-weight: 600;
-          margin-bottom: 2px;
-        }
-      
-        #toolbar select {
-          width: 100%;
-          padding: 6px 10px;
-          font-size: 13px;
-        }
+      /* Espaciado base para HUD (botón + filtros) */
+      :root {
+        --ui-gap: 16px;
       }
-
-
+      
       /* ==== Botón flotante ==== */
       .toggle-filters-btn {
         position: fixed;
-        bottom: 16px;
-        left: 16px;
+        bottom: var(--ui-gap);
+        left: var(--ui-gap);
         z-index: 1200;
         background: #0f172a;
         color: white;
@@ -233,7 +201,7 @@
         font-size: 14px;
         border: none;
         cursor: pointer;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         transition: background 0.2s ease;
       }
       
@@ -243,26 +211,50 @@
       
       /* ==== Toolbar oculto por defecto ==== */
       #toolbar {
+        position: fixed;
+        bottom: calc(var(--ui-gap) * 3.5); /* queda justo encima del botón */
+        left: 50%;
+        transform: translateX(-50%) translateY(20px);
+        z-index: 1100;
+      
+        /* misma “seguridad” lateral que el botón */
+        max-width: calc(100% - (var(--ui-gap) * 2));
+      
+        background: rgba(255, 255, 255, 0.96);
+        border-radius: 999px;
+        padding: 6px 14px;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.18);
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border: 1px solid #e2e8f0;
+        flex-wrap: wrap;
+      
         opacity: 0;
         pointer-events: none;
-        transform: translateY(20px);
         transition: opacity 0.25s ease, transform 0.25s ease;
       }
       
-      /* ==== Toolbar visible ==== */
       #toolbar.is-visible {
         opacity: 1;
         pointer-events: auto;
-        transform: translateY(0);
+        transform: translateX(-50%) translateY(0);
       }
       
       /* ==== Mobile layout ==== */
       @media (max-width: 640px) {
+        #map {
+          height: 100dvh;
+        }
+      
+        /* En mobile el toolbar respeta el mismo margen de pantalla que el botón */
         #toolbar {
-          width: calc(100% - 24px);
-          left: 50%;
-          transform: translate(-50%, 20px);
-          bottom: 60px;
+          bottom: calc(var(--ui-gap) * 3.5); /* encima del botón */
+          left: var(--ui-gap);
+          right: var(--ui-gap);
+          transform: translateY(20px); /* sin centrar con translateX */
+      
           border-radius: 14px;
           padding: 10px 12px;
           flex-direction: column;
@@ -271,7 +263,7 @@
         }
       
         #toolbar.is-visible {
-          transform: translate(-50%, 0);
+          transform: translateY(0);
         }
       
         #toolbar label {
@@ -285,6 +277,7 @@
           padding: 6px 8px;
         }
       }
+
 
     </style>
   </head>

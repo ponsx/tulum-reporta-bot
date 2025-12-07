@@ -702,6 +702,10 @@
             .catch((err) => console.error("Error cargando reportes:", err));
         });
 
+      document.getElementById("categoriaFilter").addEventListener("change", renderMarkers);
+      document.getElementById("zonaFilter").addEventListener("change", renderMarkers);
+      document.getElementById("timeFilter").addEventListener("change", renderMarkers);
+
       /* =========================
          TOGGLE FILTROS
          ========================= */

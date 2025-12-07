@@ -774,6 +774,23 @@
       const toggleBtn = document.getElementById("toggleFilters");
       const toolbar = document.getElementById("toolbar");
 
+      // Cerrar filtros haciendo clic fuera del popup
+      document.addEventListener("click", (e) => {
+        const clickedInsideToolbar = toolbar.contains(e.target);
+        const clickedToggleBtn = toggleBtn.contains(e.target);
+      
+        // Si no está visible, no hacemos nada
+        if (!toolbar.classList.contains("is-visible")) return;
+      
+        // Si hace clic dentro del panel o en el botón, no cerramos
+        if (clickedInsideToolbar || clickedToggleBtn) return;
+      
+        // Cierra el panel
+        toolbar.classList.remove("is-visible");
+        toggleBtn.textContent = "Filtros";
+      });
+
+
       toggleBtn.addEventListener("click", () => {
         const visible = toolbar.classList.toggle("is-visible");
         toggleBtn.textContent = visible ? "Cerrar filtros" : "Filtros";

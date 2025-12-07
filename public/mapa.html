@@ -180,7 +180,7 @@
 
       /* Paleta viva y diferenciada */
       .marker-calles {
-        background-color: #ef4444; /* rojo vivo */
+        background-color: #6b7280; /* gray-500 */
       }
       .marker-luces {
         background-color: #facc15; /* amarillo */
@@ -192,13 +192,13 @@
         background-color: #0ea5e9; /* azul cielo */
       }
       .marker-espacio {
-        background-color: #6366f1; /* índigo */
+        background-color: #14b8a6; /* teal-500 */
       }
       .marker-fauna {
         background-color: #f97316; /* naranja */
       }
       .marker-construccion {
-        background-color: #eab308; /* ámbar */
+        background-color: #ef4444; /* red-500 */
       }
       .marker-otro {
         background-color: #9ca3af; /* gris */
@@ -369,9 +369,9 @@
 
       function getCategoriaIconClass(nombre) {
         if (!nombre) return "fa-solid fa-location-dot";
-
+      
         if (nombre.startsWith("Calles y Carreteras")) {
-          return "fa-solid fa-road";
+          return "fa-solid fa-car";
         }
         if (nombre.startsWith("Luces y Electricidad")) {
           return "fa-solid fa-lightbulb";
@@ -383,7 +383,7 @@
           return "fa-solid fa-droplet";
         }
         if (nombre.startsWith("Banquetas y Parques")) {
-          return "fa-solid fa-tree";
+          return "fa-solid fa-person-walking";
         }
         if (nombre.startsWith("Animales y Fauna")) {
           return "fa-solid fa-paw";
@@ -391,9 +391,10 @@
         if (nombre.startsWith("Construcción y Obras")) {
           return "fa-solid fa-person-digging";
         }
-
+      
         return "fa-solid fa-location-dot";
       }
+
 
       function createCategoriaIcon(cat) {
         const catKey = getCategoriaKey(cat);

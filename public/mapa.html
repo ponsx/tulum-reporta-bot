@@ -5,15 +5,6 @@
     <title>Mapa de reportes - Tulum Reporta</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-   <!-- Fontawesome -->
-      <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
-      integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkTtJp1Z8PqS+X5p1jXKfkxI5dFvG7CqkzN3D5w5pS4F8Jw2C4h8r5Vg=="
-      crossorigin="anonymous"
-      referrerpolicy="no-referrer"
-    />
-    
     <!-- Leaflet CSS -->
     <link
       rel="stylesheet"
@@ -22,7 +13,20 @@
       crossorigin=""
     />
 
+    <!-- Font Awesome para íconos de marcadores -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+      integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkTtJp1Z8PqS+X5p1jXKfkxI5dFvG7CqkzN3D5w5pS4F8Jw2C4h8r5Vg=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+
     <style>
+      :root {
+        --ui-gap: 16px; /* margen base HUD (botón + filtros) */
+      }
+
       html,
       body {
         margin: 0;
@@ -37,13 +41,16 @@
         height: 100vh;
       }
 
-      /* Barra de filtros flotante */
+      /* ==== Toolbar de filtros (popup) ==== */
       #toolbar {
         position: fixed;
-        bottom: 10px;
+        bottom: calc(var(--ui-gap) * 3.5); /* queda encima del botón */
         left: 50%;
-        transform: translateX(-50%);
-        z-index: 1000;
+        transform: translateX(-50%) translateY(20px);
+        z-index: 1100;
+
+        max-width: calc(100% - (var(--ui-gap) * 2));
+
         background: rgba(255, 255, 255, 0.96);
         border-radius: 999px;
         padding: 6px 14px;
@@ -54,6 +61,16 @@
         gap: 10px;
         border: 1px solid #e2e8f0;
         flex-wrap: wrap;
+
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s ease, transform 0.25s ease;
+      }
+
+      #toolbar.is-visible {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateX(-50%) translateY(0);
       }
 
       #toolbar label {
@@ -72,11 +89,41 @@
         outline: none;
       }
 
+      /* ==== Botón flotante Filtros ==== */
+      .toggle-filters-btn {
+        position: fixed;
+        bottom: var(--ui-gap);
+        left: var(--ui-gap);
+        z-index: 1200;
+        background: #0f172a;
+        color: white;
+        padding: 10px 14px;
+        border-radius: 12px;
+        font-size: 14px;
+        border: none;
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        transition: background 0.2s ease;
+      }
+
+      .toggle-filters-btn:hover {
+        background: #1e293b;
+      }
+
+      /* ==== Popups Leaflet ==== */
       .leaflet-popup-content {
         font-size: 14px;
+        width: 240px !important;
+        max-width: 240px !important;
       }
+
       .leaflet-popup-content-wrapper {
         margin-top: 40px;
+      }
+
+      .leaflet-popup-content p,
+      .leaflet-popup-content div {
+        word-wrap: break-word;
       }
 
       .popup-titulo {
@@ -111,19 +158,7 @@
         margin: 0 auto 6px;
       }
 
-      /* Ancho fijo para TODOS los popups */
-      .leaflet-popup-content {
-        width: 240px !important;
-        max-width: 240px !important;
-      }
-
-      /* Evita que el texto rompa el diseño */
-      .leaflet-popup-content p,
-      .leaflet-popup-content div {
-        word-wrap: break-word;
-      }
-
-      /* MARKERS POR CATEGORÍA */
+      /* ==== Marcadores personalizados ==== */
       .custom-marker-wrapper {
         transform: translate(-50%, -50%);
       }
@@ -135,10 +170,13 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 18px;
-        font-weight: 700;
         border: 2px solid rgba(255, 255, 255, 1) !important;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+      }
+
+      .marker-circle i {
+        font-size: 16px;
+        color: #111827;
       }
 
       .marker-calles {
@@ -166,7 +204,7 @@
         background-color: #e2e2e5;
       }
 
-      /* LIGHTBOX */
+      /* ==== Lightbox ==== */
       .lightbox {
         position: fixed;
         inset: 0;
@@ -192,102 +230,39 @@
         cursor: zoom-in;
       }
 
-      /* Espaciado base para HUD (botón + filtros) */
-      :root {
-        --ui-gap: 16px;
-      }
-      
-      /* ==== Botón flotante ==== */
-      .toggle-filters-btn {
-        position: fixed;
-        bottom: var(--ui-gap);
-        left: var(--ui-gap);
-        z-index: 1200;
-        background: #0f172a;
-        color: white;
-        padding: 10px 14px;
-        border-radius: 12px;
-        font-size: 14px;
-        border: none;
-        cursor: pointer;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-        transition: background 0.2s ease;
-      }
-      
-      .toggle-filters-btn:hover {
-        background: #1e293b;
-      }
-      
-      /* ==== Toolbar oculto por defecto ==== */
-      #toolbar {
-        position: fixed;
-        bottom: calc(var(--ui-gap) * 4); 
-        left: 50%;
-        transform: translateX(-50%) translateY(20px);
-        z-index: 1100;
-      
-        /* misma “seguridad” lateral que el botón */
-        max-width: calc(100% - (var(--ui-gap) * 2));
-      
-        background: rgba(255, 255, 255, 0.96);
-        border-radius: 999px;
-        padding: 6px 14px;
-        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.18);
-        font-size: 13px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        border: 1px solid #e2e8f0;
-        flex-wrap: wrap;
-      
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.25s ease, transform 0.25s ease;
-      }
-      
-      #toolbar.is-visible {
-        opacity: 1;
-        pointer-events: auto;
-        transform: translateX(-50%) translateY(0);
-      }
-      
-      /* ==== Mobile layout ==== */
+      /* ==== Mobile ==== */
       @media (max-width: 640px) {
         #map {
           height: 100dvh;
         }
-      
-        /* En mobile el toolbar respeta el mismo margen de pantalla que el botón */
+
         #toolbar {
-          bottom: calc(var(--ui-gap) * 3.5); /* encima del botón */
+          bottom: calc(var(--ui-gap) * 3.5);
           left: var(--ui-gap);
           right: var(--ui-gap);
-          transform: translateY(20px); /* sin centrar con translateX */
-      
+          transform: translateY(20px);
           border-radius: 14px;
           padding: 10px 12px;
           flex-direction: column;
           align-items: stretch;
           gap: 6px;
         }
-      
+
         #toolbar.is-visible {
           transform: translateY(0);
         }
-      
+
         #toolbar label {
           margin-bottom: 2px;
           font-weight: 600;
         }
-      
+
         #toolbar select {
           width: 100%;
           font-size: 14px;
           padding: 6px 8px;
         }
       }
-
-
     </style>
   </head>
 
@@ -297,7 +272,7 @@
       <img id="lightbox-img" alt="Foto del reporte ampliada" />
     </div>
 
-    <!-- Barra de filtros -->
+    <!-- Barra de filtros (popup, inicialmente oculta) -->
     <div id="toolbar">
       <label for="zonaFilter">Zona:</label>
       <select id="zonaFilter">
@@ -393,24 +368,45 @@
         return "otro";
       }
 
-      function getCategoriaEmoji(nombre) {
-        if (!nombre) return "📍";
-        if (nombre.startsWith("Calles y Carreteras")) return "🚗";
-        if (nombre.startsWith("Luces y Electricidad")) return "💡";
-        if (nombre.startsWith("Basura y Residuos")) return "♻️";
-        if (nombre.startsWith("Agua y Drenaje")) return "💧";
-        if (nombre.startsWith("Banquetas y Parques")) return "🚶🏽";
-        if (nombre.startsWith("Animales y Fauna")) return "🐾";
-        if (nombre.startsWith("Construcción y Obras")) return "🚧";
-        return "📍";
+      function getCategoriaIconClass(nombre) {
+        if (!nombre) return "fa-solid fa-location-dot";
+
+        if (nombre.startsWith("Calles y Carreteras")) {
+          return "fa-solid fa-road";
+        }
+        if (nombre.startsWith("Luces y Electricidad")) {
+          return "fa-solid fa-lightbulb";
+        }
+        if (nombre.startsWith("Basura y Residuos")) {
+          return "fa-solid fa-trash";
+        }
+        if (nombre.startsWith("Agua y Drenaje")) {
+          return "fa-solid fa-droplet";
+        }
+        if (nombre.startsWith("Banquetas y Parques")) {
+          return "fa-solid fa-tree";
+        }
+        if (nombre.startsWith("Animales y Fauna")) {
+          return "fa-solid fa-paw";
+        }
+        if (nombre.startsWith("Construcción y Obras")) {
+          return "fa-solid fa-person-digging";
+        }
+
+        return "fa-solid fa-location-dot";
       }
 
       function createCategoriaIcon(cat) {
+        const catKey = getCategoriaKey(cat);
+        const iconClass = getCategoriaIconClass(cat);
+
         return L.divIcon({
           className: "custom-marker-wrapper",
-          html: `<div class="marker-circle marker-${getCategoriaKey(
-            cat
-          )}">${getCategoriaEmoji(cat)}</div>`,
+          html: `
+            <div class="marker-circle marker-${catKey}">
+              <i class="${iconClass}"></i>
+            </div>
+          `,
           iconSize: [30, 30],
           iconAnchor: [15, 15],
           popupAnchor: [0, -15],
@@ -426,9 +422,9 @@
             <div class="popup-titulo">${inc.categoria || ""}</div>
             <div class="popup-sub">${inc.subcategoria || ""}</div>
 
-           ${
-             inc.foto_url
-               ? `<div class="popup-foto">
+            ${
+              inc.foto_url
+                ? `<div class="popup-foto">
                     <img
                       src="${inc.foto_url}"
                       alt="Foto del reporte"
@@ -436,8 +432,8 @@
                       data-full="${inc.foto_url}"
                     />
                   </div>`
-               : ""
-           }
+                : ""
+            }
 
             ${
               inc.descripcion
@@ -529,7 +525,10 @@
         }
       }
 
-      // LIGHTBOX
+      /* =========================
+         LIGHTBOX
+         ========================= */
+
       const lightboxEl = document.getElementById("lightbox");
       const lightboxImg = document.getElementById("lightbox-img");
 
@@ -678,7 +677,7 @@
          CARGA DE ZONAS + REPORTES
          ========================= */
 
-      // OJO: coloca tu zonas_tulum.geojson en /public/data/ y ajusta la ruta si hace falta
+      // Ajusta la ruta si tu GeoJSON está en otro sitio
       fetch("/data/zonas_tulum.geojson")
         .then((res) => {
           if (!res.ok) throw new Error("No se pudo cargar el GeoJSON de zonas");
@@ -691,6 +690,7 @@
           console.warn("No se pudieron cargar zonas:", err);
         })
         .finally(() => {
+          // Ajusta esta ruta a tu endpoint real si es distinto
           fetch("/api/reportes")
             .then((res) => res.json())
             .then((reportes) => {
@@ -707,28 +707,25 @@
             .catch((err) => console.error("Error cargando reportes:", err));
         });
 
-      document
-        .getElementById("categoriaFilter")
-        .addEventListener("change", renderMarkers);
+      /* =========================
+         TOGGLE FILTROS
+         ========================= */
 
-      document
-        .getElementById("timeFilter")
-        .addEventListener("change", renderMarkers);
-
-      document
-        .getElementById("zonaFilter")
-        .addEventListener("change", renderMarkers);
-   
-    // Mostrar / ocultar barra de filtros
       const toggleBtn = document.getElementById("toggleFilters");
       const toolbar = document.getElementById("toolbar");
-      
+
       toggleBtn.addEventListener("click", () => {
         const visible = toolbar.classList.toggle("is-visible");
         toggleBtn.textContent = visible ? "Cerrar filtros" : "Filtros";
       });
 
-    
+      // Opcional: cerrar filtros con ESC
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && toolbar.classList.contains("is-visible")) {
+          toolbar.classList.remove("is-visible");
+          toggleBtn.textContent = "Filtros";
+        }
+      });
     </script>
   </body>
 </html>

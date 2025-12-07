@@ -398,12 +398,7 @@
          SISTEMA DE MARKERS + CLUSTER + FILTROS
          ========================= */
 
-      // Grupo de clusters en vez de simple layerGroup
-      const markersLayer = L.markerClusterGroup({
-        showCoverageOnHover: false,
-        maxClusterRadius: 50, // px – controla cuándo agrupa
-        spiderfyOnEveryZoom: false,
-      }).addTo(map);
+      const markersLayer = L.layerGroup().addTo(map);
 
       let allReportes = [];
       let markersById = {};

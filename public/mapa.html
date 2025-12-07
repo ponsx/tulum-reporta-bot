@@ -218,6 +218,74 @@
           font-size: 13px;
         }
       }
+
+
+      /* ==== Botón flotante ==== */
+      .toggle-filters-btn {
+        position: fixed;
+        bottom: 16px;
+        left: 16px;
+        z-index: 1200;
+        background: #0f172a;
+        color: white;
+        padding: 10px 14px;
+        border-radius: 12px;
+        font-size: 14px;
+        border: none;
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        transition: background 0.2s ease;
+      }
+      
+      .toggle-filters-btn:hover {
+        background: #1e293b;
+      }
+      
+      /* ==== Toolbar oculto por defecto ==== */
+      #toolbar {
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(20px);
+        transition: opacity 0.25s ease, transform 0.25s ease;
+      }
+      
+      /* ==== Toolbar visible ==== */
+      #toolbar.is-visible {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateY(0);
+      }
+      
+      /* ==== Mobile layout ==== */
+      @media (max-width: 640px) {
+        #toolbar {
+          width: calc(100% - 24px);
+          left: 50%;
+          transform: translate(-50%, 20px);
+          bottom: 60px;
+          border-radius: 14px;
+          padding: 10px 12px;
+          flex-direction: column;
+          align-items: stretch;
+          gap: 6px;
+        }
+      
+        #toolbar.is-visible {
+          transform: translate(-50%, 0);
+        }
+      
+        #toolbar label {
+          margin-bottom: 2px;
+          font-weight: 600;
+        }
+      
+        #toolbar select {
+          width: 100%;
+          font-size: 14px;
+          padding: 6px 8px;
+        }
+      }
+
     </style>
   </head>
 
@@ -250,6 +318,9 @@
     </div>
 
     <div id="map"></div>
+
+    <!-- Botón flotante para mostrar/ocultar filtros -->
+    <button id="toggleFilters" class="toggle-filters-btn">Filtros</button>
 
     <!-- Leaflet JS -->
     <script
@@ -645,6 +716,17 @@
       document
         .getElementById("zonaFilter")
         .addEventListener("change", renderMarkers);
+   
+    // Mostrar / ocultar barra de filtros
+      const toggleBtn = document.getElementById("toggleFilters");
+      const toolbar = document.getElementById("toolbar");
+      
+      toggleBtn.addEventListener("click", () => {
+        const visible = toolbar.classList.toggle("is-visible");
+        toggleBtn.textContent = visible ? "Cerrar filtros" : "Filtros";
+      });
+
+    
     </script>
   </body>
 </html>
